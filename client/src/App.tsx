@@ -8,6 +8,7 @@ import SalesPipeline from "@/pages/SalesPipeline";
 import Leaderboard from "@/pages/Leaderboard";
 import TeamManagement from "@/pages/TeamManagement";
 import Achievements from "@/pages/Achievements";
+import TestPage from "@/pages/TestPage";
 import Layout from "@/components/Layout";
 
 // Simple component to debug rendering issues
@@ -54,6 +55,7 @@ function Router() {
       <Route path="/team" component={TeamManagement} />
       <Route path="/achievements" component={Achievements} />
       <Route path="/debug" component={SimpleDebugView} />
+      <Route path="/test" component={TestPage} />
       <Route component={NotFound} />
     </Switch>
   );
