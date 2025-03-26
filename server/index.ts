@@ -57,7 +57,7 @@ app.use((req, res, next) => {
   }
 
   // Serve on the port that Replit expects
-  const port = process.env.PORT || 5000;
+  const port = process.env.PORT || 443;
   const host = '0.0.0.0';
   
   server.listen({
