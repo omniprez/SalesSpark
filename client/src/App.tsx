@@ -61,12 +61,22 @@ function Router() {
 
 function App() {
   console.log("App component rendering");
+  
+  // Alternative rendering approach for better stability
   return (
     <QueryClientProvider client={queryClient}>
-      <Layout>
-        <Router />
-      </Layout>
-      <Toaster />
+      <div className="app-container">
+        <div className="fallback-header">
+          <h1>ISP Sales Management Platform</h1>
+          <p>Loading application...</p>
+        </div>
+        
+        {/* Main application content */}
+        <Layout>
+          <Router />
+        </Layout>
+        <Toaster />
+      </div>
     </QueryClientProvider>
   );
 }

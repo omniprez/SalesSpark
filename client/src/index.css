@@ -11,3 +11,30 @@
     @apply font-sans antialiased bg-background text-foreground;
   }
 }
+
+/* Application specific styles */
+.app-container {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.fallback-header {
+  padding: 2rem;
+  text-align: center;
+  background-color: #0052CC;
+  color: white;
+}
+
+.fallback-header h1 {
+  font-size: 2.5rem;
+  font-weight: bold;
+  margin-bottom: 1rem;
+}
+
+/* For responsive layout */
+@media (max-width: 768px) {
+  .fallback-header h1 {
+    font-size: 1.8rem;
+  }
+}
