@@ -48,12 +48,12 @@ function SimpleDebugView() {
 function Router() {
   return (
     <Switch>
-      <Route path="/" component={SimpleDebugView} />
-      <Route path="/dashboard" component={Dashboard} />
+      <Route path="/" component={Dashboard} />
       <Route path="/pipeline" component={SalesPipeline} />
       <Route path="/leaderboard" component={Leaderboard} />
       <Route path="/team" component={TeamManagement} />
       <Route path="/achievements" component={Achievements} />
+      <Route path="/debug" component={SimpleDebugView} />
       <Route component={NotFound} />
     </Switch>
   );
@@ -63,9 +63,9 @@ function App() {
   console.log("App component rendering");
   return (
     <QueryClientProvider client={queryClient}>
-      <div className="app-container">
+      <Layout>
         <Router />
-      </div>
+      </Layout>
       <Toaster />
     </QueryClientProvider>
   );
