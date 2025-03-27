@@ -9,6 +9,9 @@ import Leaderboard from "@/pages/Leaderboard";
 import TeamManagement from "@/pages/TeamManagement";
 import Achievements from "@/pages/Achievements";
 import RewardsAndIncentives from "@/pages/RewardsAndIncentives";
+import WeeklyPipeline from "@/pages/WeeklyPipeline";
+import TeamPipeline from "@/pages/TeamPipeline";
+import AdminDashboard from "@/pages/AdminDashboard";
 import TestPage from "@/pages/TestPage";
 import Debug from "@/pages/Debug";
 import Layout from "@/components/Layout";
@@ -62,6 +65,9 @@ function Router() {
             <Switch>
               <Route path="/" component={Dashboard} />
               <Route path="/pipeline" component={SalesPipeline} />
+              <Route path="/weekly-pipeline" component={WeeklyPipeline} />
+              <Route path="/team-pipeline" component={TeamPipeline} />
+              <Route path="/admin" component={AdminDashboard} />
               <Route path="/leaderboard" component={Leaderboard} />
               <Route path="/team" component={TeamManagement} />
               <Route path="/achievements" component={Achievements} />

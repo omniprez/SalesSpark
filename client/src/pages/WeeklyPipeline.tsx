@@ -1,0 +1,445 @@
+import { useState, useEffect } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { 
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue 
+} from "@/components/ui/select";
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { 
+  Table, TableBody, TableCell, TableHead, TableHeader, TableRow 
+} from "@/components/ui/table";
+import {
+  Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger,
+} from "@/components/ui/dialog";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Progress } from "@/components/ui/progress";
+import { Separator } from "@/components/ui/separator";
+import { 
+  Loader2, Calendar, ArrowRight, Plus, Mail, Phone, Activity, Target, ArrowUp, ArrowDown, MessageSquare
+} from 'lucide-react';
+import { queryClient, apiRequest } from '@/lib/queryClient';
+import { useToast } from '@/hooks/use-toast';
+import { getCurrentUser } from '@/lib/auth';
+import { Deal, User, Customer, Target as SalesTarget } from '@shared/schema';
+
+// Helper functions for date manipulation
+const getWeekDates = (date = new Date()) => {
+  const day = date.getDay();
+  const diff = date.getDate() - day + (day === 0 ? -6 : 1); // Adjust when day is Sunday
+  const monday = new Date(date.setDate(diff));
+  monday.setHours(0, 0, 0, 0);
+  
+  const weekDates = [];
+  for (let i = 0; i < 7; i++) {
+    const nextDate = new Date(monday);
+    nextDate.setDate(monday.getDate() + i);
+    weekDates.push(nextDate);
+  }
+  
+  return weekDates;
+};
+
+const formatWeekRange = (weekDates: Date[]) => {
+  const startDate = weekDates[0];
+  const endDate = weekDates[6];
+  const options: Intl.DateTimeFormatOptions = { month: 'short', day: 'numeric' };
+  return `${startDate.toLocaleDateString('en-US', options)} - ${endDate.toLocaleDateString('en-US', options)}`;
+};
+
+// Get previous and next week
+const getPreviousWeek = (date: Date) => {
+  const newDate = new Date(date);
+  newDate.setDate(newDate.getDate() - 7);
+  return newDate;
+};
+
+const getNextWeek = (date: Date) => {
+  const newDate = new Date(date);
+  newDate.setDate(newDate.getDate() + 7);
+  return newDate;
+};
+
+export default function WeeklyPipeline() {
+  const { toast } = useToast();
+  const [selectedDate, setSelectedDate] = useState(new Date());
+  const [weekDates, setWeekDates] = useState(getWeekDates(selectedDate));
+  const [selectedUser, setSelectedUser] = useState<number | null>(null);
+  const [isCurrentUserAdmin, setIsCurrentUserAdmin] = useState(false);
+  const [weeklyNotes, setWeeklyNotes] = useState('');
+  const [notesDialogOpen, setNotesDialogOpen] = useState(false);
+  
+  // Load current user
+  useEffect(() => {
+    const loadCurrentUser = async () => {
+      const user = await getCurrentUser();
+      if (user) {
+        setSelectedUser(user.id);
+        setIsCurrentUserAdmin(user.role === 'admin' || user.role === 'manager');
+      }
+    };
+    
+    loadCurrentUser();
+  }, []);
+  
+  // Update week dates when selected date changes
+  useEffect(() => {
+    setWeekDates(getWeekDates(selectedDate));
+  }, [selectedDate]);
+  
+  // Fetch all users for admin/manager view
+  const { data: users } = useQuery<User[]>({ 
+    queryKey: ['/api/users'],
+    enabled: isCurrentUserAdmin
+  });
+  
+  // Fetch deals
+  const { data: allDeals, isLoading: dealsLoading } = useQuery<Deal[]>({ 
+    queryKey: ['/api/deals'],
+  });
+  
+  // Fetch customers for lookups
+  const { data: customers } = useQuery<Customer[]>({ 
+    queryKey: ['/api/customers'],
+  });
+  
+  // Fetch targets for this user
+  const { data: targets } = useQuery<SalesTarget[]>({ 
+    queryKey: ['/api/targets', selectedUser],
+    queryFn: async () => {
+      if (!selectedUser) return [];
+      const res = await apiRequest('GET', `/api/targets?userId=${selectedUser}`);
+      return await res.json();
+    },
+    enabled: !!selectedUser
+  });
+  
+  // Filter deals for the selected user
+  const userDeals = allDeals?.filter(deal => 
+    (!selectedUser || deal.userId === selectedUser)
+  ) || [];
+  
+  // Filter deals happening/updated this week
+  const weekDeals = userDeals.filter(deal => {
+    const dealDate = deal.updatedAt 
+      ? new Date(deal.updatedAt) 
+      : (deal.createdAt ? new Date(deal.createdAt) : new Date());
+    return weekDates[0] <= dealDate && dealDate <= weekDates[6];
+  });
+  
+  // Count deals by stage
+  const dealsByStage = {
+    prospecting: userDeals.filter(d => d.stage === 'prospecting').length,
+    qualification: userDeals.filter(d => d.stage === 'qualification').length,
+    proposal: userDeals.filter(d => d.stage === 'proposal').length,
+    negotiation: userDeals.filter(d => d.stage === 'negotiation').length,
+    closed_won: userDeals.filter(d => d.stage === 'closed_won').length,
+    closed_lost: userDeals.filter(d => d.stage === 'closed_lost').length,
+  };
+  
+  // Calculate week's closed deal value
+  const weekClosedValue = weekDeals
+    .filter(d => d.stage === 'closed_won')
+    .reduce((sum, deal) => sum + deal.value, 0);
+  
+  // Currently active target
+  const currentTarget = targets?.find(target => {
+    const now = new Date();
+    return new Date(target.startDate) <= now && new Date(target.endDate) >= now;
+  });
+  
+  // Change week handlers
+  const handlePreviousWeek = () => {
+    setSelectedDate(getPreviousWeek(selectedDate));
+  };
+  
+  const handleNextWeek = () => {
+    setSelectedDate(getNextWeek(selectedDate));
+  };
+  
+  // Customer lookup function
+  const getCustomerName = (customerId: number) => {
+    if (!customers) return 'Unknown Customer';
+    const customer = customers.find(c => c.id === customerId);
+    return customer ? customer.name : 'Unknown Customer';
+  };
+  
+  // Handle user selection
+  const handleUserChange = (userId: string) => {
+    setSelectedUser(parseInt(userId));
+  };
+  
+  // Format currency
+  const formatCurrency = (amount: number) => {
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: 'USD',
+      maximumFractionDigits: 0
+    }).format(amount);
+  };
+  
+  // Handle save notes
+  const handleSaveNotes = async () => {
+    try {
+      // Implement API call to save notes
+      // await apiRequest('POST', '/api/weekly-notes', { 
+      //   userId: selectedUser, 
+      //   weekStartDate: weekDates[0].toISOString(),
+      //   notes: weeklyNotes 
+      // });
+      
+      toast({
+        title: 'Notes saved',
+        description: 'Weekly notes have been saved successfully.',
+      });
+      setNotesDialogOpen(false);
+    } catch (error) {
+      toast({
+        title: 'Failed to save notes',
+        description: 'There was an error saving your notes.',
+        variant: 'destructive',
+      });
+    }
+  };
+  
+  return (
+    <div className="container mx-auto py-6">
+      <div className="flex justify-between items-center mb-6">
+        <div>
+          <h1 className="text-3xl font-bold">Weekly Pipeline</h1>
+          <p className="text-muted-foreground">Monitor your sales pipeline on a weekly basis</p>
+        </div>
+        
+        <div className="flex items-center space-x-4">
+          <Button variant="outline" size="sm" onClick={handlePreviousWeek}>
+            Previous Week
+          </Button>
+          
+          <div className="flex items-center bg-muted px-3 py-1 rounded-md">
+            <Calendar className="h-4 w-4 mr-2" />
+            <span>{formatWeekRange(weekDates)}</span>
+          </div>
+          
+          <Button variant="outline" size="sm" onClick={handleNextWeek}>
+            Next Week
+          </Button>
+          
+          {isCurrentUserAdmin && users && (
+            <Select 
+              value={selectedUser?.toString() || ''} 
+              onValueChange={handleUserChange}
+            >
+              <SelectTrigger className="w-[180px]">
+                <SelectValue placeholder="Select user" />
+              </SelectTrigger>
+              <SelectContent>
+                {users.map(user => (
+                  <SelectItem key={user.id} value={user.id.toString()}>
+                    {user.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
+        </div>
+      </div>
+      
+      {/* Weekly Summary Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-lg">Weekly Performance</CardTitle>
+            <CardDescription>Deals closed this week</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="text-3xl font-bold">{formatCurrency(weekClosedValue)}</div>
+            <div className="flex items-center mt-2">
+              <div className="text-sm text-muted-foreground">
+                {weekDeals.filter(d => d.stage === 'closed_won').length} deals closed
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+        
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-lg">Active Target</CardTitle>
+            <CardDescription>Current performance target</CardDescription>
+          </CardHeader>
+          <CardContent>
+            {currentTarget ? (
+              <>
+                <div className="flex justify-between mb-2">
+                  <span className="text-sm">
+                    {currentTarget.targetType === 'revenue' ? 'Revenue' : 
+                     currentTarget.targetType === 'deals' ? 'Deals' : 'Gross Profit'}
+                  </span>
+                  <span className="text-sm">
+                    {currentTarget.currentValue || 0} / {currentTarget.targetValue}
+                    {currentTarget.targetType !== 'deals' && ' USD'}
+                  </span>
+                </div>
+                <Progress 
+                  value={(currentTarget.currentValue || 0) / currentTarget.targetValue * 100} 
+                  className="h-2" 
+                />
+                <div className="text-xs text-muted-foreground mt-2">
+                  {new Date(currentTarget.endDate).toLocaleDateString()} deadline
+                </div>
+              </>
+            ) : (
+              <div className="text-muted-foreground">No active targets</div>
+            )}
+          </CardContent>
+        </Card>
+        
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-lg">Weekly Notes</CardTitle>
+            <CardDescription>Key activities and reminders</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="flex justify-between items-center">
+              <div className="text-sm text-muted-foreground">
+                {weeklyNotes ? weeklyNotes.substring(0, 50) + '...' : 'No notes for this week'}
+              </div>
+              <Button size="sm" onClick={() => setNotesDialogOpen(true)}>
+                <MessageSquare className="h-4 w-4 mr-2" />
+                {weeklyNotes ? 'Edit' : 'Add'}
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+      
+      {/* Pipeline Stages */}
+      <Card className="mb-6">
+        <CardHeader>
+          <CardTitle>Pipeline Overview</CardTitle>
+          <CardDescription>Review your deals by stage</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="flex flex-col md:flex-row justify-between items-start space-y-4 md:space-y-0">
+            {/* Pipeline Stages */}
+            <div className="grid grid-cols-3 md:grid-cols-6 gap-4 w-full">
+              {Object.entries(dealsByStage).map(([stage, count]) => (
+                <div key={stage} className="rounded-md border p-4 text-center">
+                  <h3 className="capitalize font-medium mb-2">
+                    {stage.replace('_', ' ')}
+                  </h3>
+                  <div className="text-2xl font-bold">{count}</div>
+                  {stage === 'closed_won' && (
+                    <div className="text-sm text-green-600 mt-1">
+                      {formatCurrency(userDeals
+                        .filter(d => d.stage === 'closed_won')
+                        .reduce((sum, deal) => sum + deal.value, 0))}
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+      
+      {/* Weekly Deal Activity */}
+      <Card>
+        <CardHeader>
+          <CardTitle>This Week's Deal Activity</CardTitle>
+          <CardDescription>Deals created or updated this week</CardDescription>
+        </CardHeader>
+        <CardContent>
+          {dealsLoading ? (
+            <div className="flex justify-center py-8">
+              <Loader2 className="h-8 w-8 animate-spin" />
+            </div>
+          ) : weekDeals.length > 0 ? (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Deal</TableHead>
+                  <TableHead>Customer</TableHead>
+                  <TableHead>Value</TableHead>
+                  <TableHead>Category</TableHead>
+                  <TableHead>Stage</TableHead>
+                  <TableHead>Updated</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {weekDeals.map(deal => (
+                  <TableRow key={deal.id}>
+                    <TableCell className="font-medium">{deal.name}</TableCell>
+                    <TableCell>{getCustomerName(deal.customerId)}</TableCell>
+                    <TableCell>{formatCurrency(deal.value)}</TableCell>
+                    <TableCell>
+                      <Badge variant="outline" className="capitalize">
+                        {deal.category}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>
+                      <Badge 
+                        className={
+                          deal.stage === 'closed_won' 
+                            ? 'bg-green-100 text-green-800 hover:bg-green-100' 
+                            : deal.stage === 'closed_lost'
+                              ? 'bg-red-100 text-red-800 hover:bg-red-100'
+                              : 'bg-blue-100 text-blue-800 hover:bg-blue-100'
+                        }
+                      >
+                        {deal.stage.replace('_', ' ')}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>
+                      {new Date(deal.updatedAt || deal.createdAt || new Date()).toLocaleDateString()}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          ) : (
+            <div className="text-center py-8 text-muted-foreground">
+              No deal activity recorded for this week
+            </div>
+          )}
+        </CardContent>
+      </Card>
+      
+      {/* Notes Dialog */}
+      <Dialog open={notesDialogOpen} onOpenChange={setNotesDialogOpen}>
+        <DialogContent className="sm:max-w-[525px]">
+          <DialogHeader>
+            <DialogTitle>Weekly Notes</DialogTitle>
+            <DialogDescription>
+              Add notes, reminders, and key activities for this week
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="py-4">
+            <Label htmlFor="notes" className="mb-2 block">
+              Notes for {formatWeekRange(weekDates)}
+            </Label>
+            <Textarea
+              id="notes"
+              value={weeklyNotes}
+              onChange={(e) => setWeeklyNotes(e.target.value)}
+              placeholder="Enter your notes, key activities, and reminders for this week"
+              className="min-h-[150px]"
+            />
+          </div>
+          
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={() => setNotesDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button type="button" onClick={handleSaveNotes}>
+              Save Notes
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}

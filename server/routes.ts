@@ -1,7 +1,14 @@
 import type { Express, Request, Response, NextFunction } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { insertDealSchema, insertUserSchema, insertCustomerSchema, insertActivitySchema } from "@shared/schema";
+import { 
+  insertDealSchema, 
+  insertUserSchema, 
+  insertCustomerSchema, 
+  insertActivitySchema,
+  insertTargetSchema,
+  insertTeamSchema
+} from "@shared/schema";
 import { ZodError } from "zod";
 import { fromZodError } from "zod-validation-error";
 // Extend express Request type to include user property
@@ -395,6 +402,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error fetching teams:", error);
       res.status(500).json({ error: "Failed to fetch teams" });
+    }
+  });
+  
+  // Get users by team
+  app.get("/api/teams/:teamId/users", async (req, res) => {
+    try {
+      const teamId = parseInt(req.params.teamId);
+      const users = await storage.getUsersByTeam(teamId);
+      res.json(users);
+    } catch (error) {
+      console.error("Error fetching team users:", error);
+      res.status(500).json({ error: "Failed to fetch team users" });
     }
   });
   
@@ -861,6 +880,63 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error fetching point transactions:", error);
       res.status(500).json({ error: "Failed to fetch point transactions" });
+    }
+  });
+  
+  // Target routes
+  app.get("/api/targets", async (req, res) => {
+    try {
+      const userId = req.query.userId ? parseInt(req.query.userId as string) : undefined;
+      
+      if (userId) {
+        // Get targets for a specific user
+        const targets = await storage.getTargets(userId);
+        res.json(targets);
+      } else {
+        // Get all targets across all users
+        const allUsers = await storage.getUsers();
+        const allTargets = [];
+        
+        for (const user of allUsers) {
+          const userTargets = await storage.getTargets(user.id);
+          allTargets.push(...userTargets);
+        }
+        
+        res.json(allTargets);
+      }
+    } catch (error) {
+      console.error("Error fetching targets:", error);
+      res.status(500).json({ error: "Failed to fetch targets" });
+    }
+  });
+  
+  app.post("/api/targets", async (req, res) => {
+    try {
+      const targetData = insertTargetSchema.parse(req.body);
+      const target = await storage.createTarget(targetData);
+      res.status(201).json(target);
+    } catch (error) {
+      if (error instanceof ZodError) {
+        return res.status(400).json({ error: fromZodError(error).message });
+      }
+      console.error("Error creating target:", error);
+      res.status(500).json({ error: "Failed to create target" });
+    }
+  });
+  
+  app.patch("/api/targets/:id", async (req, res) => {
+    try {
+      const targetId = parseInt(req.params.id);
+      const updatedTarget = await storage.updateTarget(targetId, req.body);
+      
+      if (!updatedTarget) {
+        return res.status(404).json({ error: "Target not found" });
+      }
+      
+      res.json(updatedTarget);
+    } catch (error) {
+      console.error("Error updating target:", error);
+      res.status(500).json({ error: "Failed to update target" });
     }
   });
   
