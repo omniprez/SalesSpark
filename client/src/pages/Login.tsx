@@ -27,16 +27,18 @@ export default function Login() {
         headers: {
           'Content-Type': 'application/json',
         },
+        credentials: 'include',
         body: JSON.stringify(formData),
       });
 
-      const data = await response.json();
-      
       if (response.ok) {
-        setLocation('/');
-      } else {
-        setError(data.message || 'Invalid username or password');
+        const data = await response.json();
+        if (data.success) {
+          setLocation('/');
+          return;
+        }
       }
+      setError('Invalid username or password');
     } catch (err) {
       setError('An error occurred. Please try again.');
     } finally {
