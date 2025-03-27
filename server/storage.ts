@@ -681,93 +681,120 @@ export class MemStorage implements IStorage {
 
   // Initialize with sample data for development
   private async initializeData() {
-    // Create teams
-    const internalTeam = await this.createTeam({
-      name: 'Internal Sales Team',
+    // Create teams with real business divisions
+    const enterpriseTeam = await this.createTeam({
+      name: 'Enterprise Solutions',
       region: 'National',
       type: 'internal'
     });
     
-    const channelTeam = await this.createTeam({
-      name: 'Channel Partners',
+    const carrierTeam = await this.createTeam({
+      name: 'Carrier Services',
+      region: 'National',
+      type: 'internal'
+    });
+    
+    const regionalTeam = await this.createTeam({
+      name: 'Regional Business',
+      region: 'Central',
+      type: 'internal'
+    });
+    
+    const channelPartnersTeam = await this.createTeam({
+      name: 'Channel Partner Network',
       region: 'National',
       type: 'channel_partner'
     });
     
-    // Create sample users
+    // Create system admin user
     const adminUser = await this.createUser({
       username: 'admin',
       password: 'password',
-      name: 'Admin User',
-      email: 'admin@example.com',
+      name: 'System Administrator',
+      email: 'admin@ispcompany.com',
       role: 'Administrator',
-      teamId: internalTeam.id,
+      teamId: null,
       isChannelPartner: false,
       avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?ixlib=rb-1.2.1&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80'
     });
     
-    const alexMorgan = await this.createUser({
-      username: 'alex.morgan',
+    // Create real sales team members
+    const robertGarcia = await this.createUser({
+      username: 'robert.garcia',
       password: 'password',
-      name: 'Alex Morgan',
-      email: 'alex.morgan@example.com',
-      role: 'Sales Manager',
-      teamId: internalTeam.id,
+      name: 'Robert Garcia',
+      email: 'robert.garcia@ispcompany.com',
+      role: 'Enterprise Sales Director',
+      teamId: enterpriseTeam.id,
       isChannelPartner: false,
       avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?ixlib=rb-1.2.1&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80'
     });
     
-    const jessicaTaylor = await this.createUser({
-      username: 'jessica.taylor',
+    const lisaWilliams = await this.createUser({
+      username: 'lisa.williams',
       password: 'password',
-      name: 'Jessica Taylor',
-      email: 'jessica.taylor@example.com',
-      role: 'Sales Representative',
-      teamId: internalTeam.id,
+      name: 'Lisa Williams',
+      email: 'lisa.williams@ispcompany.com',
+      role: 'Enterprise Account Executive',
+      teamId: enterpriseTeam.id,
       isChannelPartner: false,
       avatar: 'https://images.unsplash.com/photo-1517841905240-472988babdf9?ixlib=rb-1.2.1&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80'
     });
     
-    const michaelChen = await this.createUser({
-      username: 'michael.chen',
+    const davidThompson = await this.createUser({
+      username: 'david.thompson',
       password: 'password',
-      name: 'Michael Chen',
-      email: 'michael.chen@example.com',
-      role: 'Channel Manager',
-      teamId: channelTeam.id,
-      isChannelPartner: true,
+      name: 'David Thompson',
+      email: 'david.thompson@ispcompany.com',
+      role: 'Carrier Services Manager',
+      teamId: carrierTeam.id,
+      isChannelPartner: false,
       avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?ixlib=rb-1.2.1&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80'
     });
     
-    const sarahJohnson = await this.createUser({
-      username: 'sarah.johnson',
+    const michellePatel = await this.createUser({
+      username: 'michelle.patel',
       password: 'password',
-      name: 'Sarah Johnson',
-      email: 'sarah.johnson@example.com',
-      role: 'Sales Representative',
-      teamId: internalTeam.id,
+      name: 'Michelle Patel',
+      email: 'michelle.patel@ispcompany.com',
+      role: 'Regional Sales Manager',
+      teamId: regionalTeam.id,
       isChannelPartner: false,
       avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?ixlib=rb-1.2.1&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80'
     });
     
-    const davidWilson = await this.createUser({
-      username: 'david.wilson',
+    const jamesMurphy = await this.createUser({
+      username: 'james.murphy',
       password: 'password',
-      name: 'David Wilson',
-      email: 'david.wilson@example.com',
-      role: 'Sales Representative',
-      teamId: internalTeam.id,
+      name: 'James Murphy',
+      email: 'james.murphy@partnernetwork.com',
+      role: 'Channel Partner Lead',
+      teamId: channelPartnersTeam.id,
+      isChannelPartner: true,
+      avatar: 'https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?ixlib=rb-1.2.1&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80'
+    });
+    
+    // Create more team members
+    // Regional team member
+    const danielWong = await this.createUser({
+      username: 'daniel.wong',
+      password: 'password',
+      name: 'Daniel Wong',
+      email: 'daniel.wong@ispcompany.com',
+      role: 'Regional Account Executive',
+      teamId: regionalTeam.id,
       isChannelPartner: false,
       avatar: 'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?ixlib=rb-1.2.1&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80'
     });
     
-    const emilyRodriguez = await this.createUser({
-      username: 'emily.rodriguez',
+    // Channel partner team member
+    const emilySanchez = await this.createUser({
+      username: 'emily.sanchez',
       password: 'password',
-      name: 'Emily Rodriguez',
-      email: 'emily.rodriguez@example.com',
-      role: 'Channel Partner',
-      teamId: channelTeam.id,
+      name: 'Emily Sanchez',
+      email: 'emily.sanchez@partnernetwork.com',
+      role: 'Channel Partner Representative',
+      teamId: channelPartnersTeam.id,
       isChannelPartner: true,
       avatar: 'https://images.unsplash.com/photo-1573497019940-1c28c88b4f3e?ixlib=rb-1.2.1&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80'
     });
@@ -822,14 +849,15 @@ export class MemStorage implements IStorage {
       description: 'High-speed fiber optic connectivity for businesses'
     });
     
-    // Create sample deals
-    const deal1 = await this.createDeal({
-      name: 'ACME Corporation - Wireless Network Expansion',
-      value: 125000,
+    // Create realistic deals for each team member
+    // Enterprise deals
+    const enterpriseDeal1 = await this.createDeal({
+      name: 'ACME Corporation - Enterprise Wireless Network Expansion',
+      value: 375000,
       category: 'wireless',
       stage: 'proposal',
       customerId: acmeCorp.id,
-      userId: sarahJohnson.id,
+      userId: robertGarcia.id,
       gpPercentage: 65,
       expectedCloseDate: new Date(Date.now() + 1000 * 60 * 60 * 24 * 30), // 30 days from now
       region: 'Northeast',
@@ -837,31 +865,118 @@ export class MemStorage implements IStorage {
       dealType: 'expansion'
     });
     
-    const deal2 = await this.createDeal({
-      name: 'TechSolutions Inc - Fiber Network Installation',
-      value: 98750,
+    const enterpriseDeal2 = await this.createDeal({
+      name: 'TechSolutions Inc - Campus-wide Fiber Installation',
+      value: 245000,
       category: 'fiber',
       stage: 'negotiation',
       customerId: techSolutions.id,
-      userId: michaelChen.id,
-      gpPercentage: 70,
+      userId: lisaWilliams.id,
+      gpPercentage: 68,
       expectedCloseDate: new Date(Date.now() + 1000 * 60 * 60 * 24 * 15), // 15 days from now
       region: 'West',
+      clientType: 'B2B',
+      dealType: 'new'
+    });
+    
+    const enterpriseDeal3 = await this.createDeal({
+      name: 'Microtech Systems - Secure Cloud Connection Service',
+      value: 178500,
+      category: 'fiber',
+      stage: 'qualification',
+      customerId: globalLogistics.id,
+      userId: lisaWilliams.id,
+      gpPercentage: 72,
+      expectedCloseDate: new Date(Date.now() + 1000 * 60 * 60 * 24 * 45), // 45 days from now
+      region: 'Northeast',
+      clientType: 'B2B',
+      dealType: 'new'
+    });
+    
+    // Carrier deals
+    const carrierDeal1 = await this.createDeal({
+      name: 'Northeast Telecom - Dark Fiber Network Expansion',
+      value: 1250000,
+      category: 'fiber',
+      stage: 'closing',
+      customerId: acmeCorp.id,
+      userId: davidThompson.id,
+      gpPercentage: 58,
+      expectedCloseDate: new Date(Date.now() + 1000 * 60 * 60 * 24 * 7), // 7 days from now
+      region: 'Northeast',
+      clientType: 'carrier',
+      dealType: 'expansion'
+    });
+    
+    const carrierDeal2 = await this.createDeal({
+      name: 'Pacific Mobile Carriers - Metro Area Network Upgrade',
+      value: 875000,
+      category: 'wireless',
+      stage: 'negotiation',
+      customerId: techSolutions.id,
+      userId: davidThompson.id,
+      gpPercentage: 61,
+      expectedCloseDate: new Date(Date.now() + 1000 * 60 * 60 * 24 * 28), // 28 days from now
+      region: 'West',
+      clientType: 'carrier',
+      dealType: 'upgrade'
+    });
+    
+    // Regional business deals
+    const regionalDeal1 = await this.createDeal({
+      name: 'Central Medical Center - Wireless Network Refresh',
+      value: 145000,
+      category: 'wireless',
+      stage: 'proposal',
+      customerId: globalLogistics.id,
+      userId: michellePatel.id,
+      gpPercentage: 63,
+      expectedCloseDate: new Date(Date.now() + 1000 * 60 * 60 * 24 * 22), // 22 days from now
+      region: 'Central',
+      clientType: 'regional',
+      dealType: 'refresh'
+    });
+    
+    const regionalDeal2 = await this.createDeal({
+      name: 'Midwest Manufacturing Group - Fiber Connectivity Deployment',
+      value: 215000,
+      category: 'fiber',
+      stage: 'qualification',
+      customerId: acmeCorp.id,
+      userId: michellePatel.id,
+      gpPercentage: 67,
+      expectedCloseDate: new Date(Date.now() + 1000 * 60 * 60 * 24 * 35), // 35 days from now
+      region: 'Central',
       clientType: 'regional',
       dealType: 'new'
     });
     
-    const deal3 = await this.createDeal({
-      name: 'Global Logistics - Wireless Backup System',
-      value: 143200,
-      category: 'wireless',
-      stage: 'qualification',
-      customerId: globalLogistics.id,
-      userId: davidWilson.id,
-      gpPercentage: 62,
-      expectedCloseDate: new Date(Date.now() + 1000 * 60 * 60 * 24 * 45), // 45 days from now
+    // Channel partner deals
+    const channelDeal1 = await this.createDeal({
+      name: 'Southern Financial Network - Branch Office Connectivity',
+      value: 325000,
+      category: 'fiber',
+      stage: 'discovery',
+      customerId: techSolutions.id,
+      userId: jamesMurphy.id,
+      gpPercentage: 59,
+      expectedCloseDate: new Date(Date.now() + 1000 * 60 * 60 * 24 * 50), // 50 days from now
       region: 'Southeast',
-      clientType: 'carrier',
+      clientType: 'B2B',
+      dealType: 'new'
+    });
+    
+    const channelDeal2 = await this.createDeal({
+      name: 'Western Healthcare Association - Private 5G Network',
+      value: 495000,
+      category: 'wireless',
+      stage: 'proposal',
+      customerId: globalLogistics.id,
+      userId: jamesMurphy.id,
+      gpPercentage: 64,
+      expectedCloseDate: new Date(Date.now() + 1000 * 60 * 60 * 24 * 40), // 40 days from now
+      region: 'West',
+      clientType: 'B2B',
       dealType: 'new'
     });
     
@@ -905,29 +1020,124 @@ export class MemStorage implements IStorage {
     
     // Award achievements to users
     await this.awardAchievement({
-      userId: jessicaTaylor.id,
+      userId: lisaWilliams.id,
       achievementId: salesStar.id
     });
     
     await this.awardAchievement({
-      userId: michaelChen.id,
+      userId: davidThompson.id,
       achievementId: dealCloser.id
     });
     
     await this.awardAchievement({
-      userId: alexMorgan.id,
+      userId: robertGarcia.id,
       achievementId: fiberExpert.id
     });
     
-    // Create user targets
+    // Create real weekly sales targets with reviews
+    // Enterprise team lead - quarterly and weekly targets
     await this.createTarget({
-      userId: alexMorgan.id,
+      userId: robertGarcia.id,
       targetType: 'revenue',
-      period: 'monthly',
-      startDate: new Date(new Date().setDate(1)), // First day of current month
-      endDate: new Date(new Date(new Date().setMonth(new Date().getMonth() + 1)).setDate(0)), // Last day of current month
-      targetValue: 200000,
-      currentValue: 156000
+      period: 'quarterly',
+      startDate: new Date(new Date().getFullYear(), Math.floor(new Date().getMonth() / 3) * 3, 1), // First day of current quarter
+      endDate: new Date(new Date().getFullYear(), Math.floor(new Date().getMonth() / 3) * 3 + 3, 0), // Last day of current quarter
+      targetValue: 1500000, // $1.5M quarterly target
+      currentValue: 675000  // $675K so far (45% to goal)
+    });
+    
+    await this.createTarget({
+      userId: robertGarcia.id,
+      targetType: 'revenue',
+      period: 'weekly',
+      startDate: new Date(new Date().setDate(new Date().getDate() - new Date().getDay())), // First day of current week (Sunday)
+      endDate: new Date(new Date().setDate(new Date().getDate() - new Date().getDay() + 6)), // Last day of current week (Saturday)
+      targetValue: 115000, // $115K weekly target
+      currentValue: 65000  // $65K so far (56% to goal)
+    });
+    
+    // Enterprise Account Executive - quarterly and weekly targets
+    await this.createTarget({
+      userId: lisaWilliams.id,
+      targetType: 'revenue',
+      period: 'quarterly',
+      startDate: new Date(new Date().getFullYear(), Math.floor(new Date().getMonth() / 3) * 3, 1), // First day of current quarter
+      endDate: new Date(new Date().getFullYear(), Math.floor(new Date().getMonth() / 3) * 3 + 3, 0), // Last day of current quarter
+      targetValue: 750000, // $750K quarterly target
+      currentValue: 410000  // $410K so far (55% to goal)
+    });
+    
+    await this.createTarget({
+      userId: lisaWilliams.id,
+      targetType: 'revenue',
+      period: 'weekly',
+      startDate: new Date(new Date().setDate(new Date().getDate() - new Date().getDay())), // First day of current week (Sunday)
+      endDate: new Date(new Date().setDate(new Date().getDate() - new Date().getDay() + 6)), // Last day of current week (Saturday)
+      targetValue: 57700, // $57.7K weekly target
+      currentValue: 23000  // $23K so far (40% to goal)
+    });
+    
+    // Carrier Services Manager - quarterly and weekly targets
+    await this.createTarget({
+      userId: davidThompson.id,
+      targetType: 'revenue',
+      period: 'quarterly',
+      startDate: new Date(new Date().getFullYear(), Math.floor(new Date().getMonth() / 3) * 3, 1), // First day of current quarter
+      endDate: new Date(new Date().getFullYear(), Math.floor(new Date().getMonth() / 3) * 3 + 3, 0), // Last day of current quarter
+      targetValue: 2200000, // $2.2M quarterly target (carrier deals are larger)
+      currentValue: 1450000  // $1.45M so far (66% to goal)
+    });
+    
+    await this.createTarget({
+      userId: davidThompson.id,
+      targetType: 'revenue',
+      period: 'weekly',
+      startDate: new Date(new Date().setDate(new Date().getDate() - new Date().getDay())), // First day of current week (Sunday)
+      endDate: new Date(new Date().setDate(new Date().getDate() - new Date().getDay() + 6)), // Last day of current week (Saturday)
+      targetValue: 169000, // $169K weekly target
+      currentValue: 135000  // $135K so far (80% to goal)
+    });
+    
+    // Regional Sales Manager - quarterly and weekly targets
+    await this.createTarget({
+      userId: michellePatel.id,
+      targetType: 'revenue',
+      period: 'quarterly',
+      startDate: new Date(new Date().getFullYear(), Math.floor(new Date().getMonth() / 3) * 3, 1), // First day of current quarter
+      endDate: new Date(new Date().getFullYear(), Math.floor(new Date().getMonth() / 3) * 3 + 3, 0), // Last day of current quarter
+      targetValue: 850000, // $850K quarterly target
+      currentValue: 325000  // $325K so far (38% to goal)
+    });
+    
+    await this.createTarget({
+      userId: michellePatel.id,
+      targetType: 'revenue',
+      period: 'weekly',
+      startDate: new Date(new Date().setDate(new Date().getDate() - new Date().getDay())), // First day of current week (Sunday)
+      endDate: new Date(new Date().setDate(new Date().getDate() - new Date().getDay() + 6)), // Last day of current week (Saturday)
+      targetValue: 65000, // $65K weekly target
+      currentValue: 42000  // $42K so far (65% to goal)
+    });
+    
+    // Channel Partner Lead - quarterly and weekly targets
+    await this.createTarget({
+      userId: jamesMurphy.id,
+      targetType: 'revenue',
+      period: 'quarterly',
+      startDate: new Date(new Date().getFullYear(), Math.floor(new Date().getMonth() / 3) * 3, 1), // First day of current quarter
+      endDate: new Date(new Date().getFullYear(), Math.floor(new Date().getMonth() / 3) * 3 + 3, 0), // Last day of current quarter
+      targetValue: 1200000, // $1.2M quarterly target
+      currentValue: 580000  // $580K so far (48% to goal)
+    });
+    
+    await this.createTarget({
+      userId: jamesMurphy.id,
+      targetType: 'revenue',
+      period: 'weekly',
+      startDate: new Date(new Date().setDate(new Date().getDate() - new Date().getDay())), // First day of current week (Sunday)
+      endDate: new Date(new Date().setDate(new Date().getDate() - new Date().getDay() + 6)), // Last day of current week (Saturday)
+      targetValue: 92000, // $92K weekly target
+      currentValue: 33000  // $33K so far (36% to goal)
     });
     
     // Create rewards
@@ -961,10 +1171,10 @@ export class MemStorage implements IStorage {
       image: "workshop.png"
     });
     
-    // Create a sample challenge
-    const salesChallenge = await this.createChallenge({
+    // Create challenges focused on ISP sales
+    const fiberSalesChallenge = await this.createChallenge({
       name: "Fiber Sales Sprint",
-      description: "Close the most fiber connectivity deals this month",
+      description: "Close at least 3 fiber connectivity deals this month to earn 1,000 points",
       startDate: new Date(new Date().setDate(1)), // First day of current month
       endDate: new Date(new Date(new Date().setMonth(new Date().getMonth() + 1)).setDate(0)), // Last day of current month
       category: "sales",
@@ -977,10 +1187,25 @@ export class MemStorage implements IStorage {
       rewardPoints: 1000
     });
     
-    // Add participant to challenge
+    const carrierDealChallenge = await this.createChallenge({
+      name: "Carrier Deal Champion",
+      description: "Close a carrier deal valued over $1M to earn 2,000 points",
+      startDate: new Date(new Date().setDate(1)), // First day of current month
+      endDate: new Date(new Date(new Date().setMonth(new Date().getMonth() + 2)).setDate(0)), // Last day of next month (2-month challenge)
+      category: "sales",
+      criteria: { 
+        type: "deal_value", 
+        clientType: "carrier", 
+        minValue: 1000000
+      },
+      status: "active",
+      rewardPoints: 2000
+    });
+    
+    // Add participants to Fiber Sales challenge
     await this.joinChallenge({
-      userId: alexMorgan.id,
-      challengeId: salesChallenge.id,
+      userId: robertGarcia.id,
+      challengeId: fiberSalesChallenge.id,
       joinedAt: new Date(),
       progress: {
         currentSales: 2,
@@ -989,23 +1214,104 @@ export class MemStorage implements IStorage {
       status: "in_progress"
     });
     
-    // Add points for the user
+    await this.joinChallenge({
+      userId: lisaWilliams.id,
+      challengeId: fiberSalesChallenge.id,
+      joinedAt: new Date(),
+      progress: {
+        currentSales: 1,
+        targetSales: 3
+      },
+      status: "in_progress"
+    });
+    
+    await this.joinChallenge({
+      userId: davidThompson.id,
+      challengeId: fiberSalesChallenge.id,
+      joinedAt: new Date(),
+      progress: {
+        currentSales: 3,
+        targetSales: 3
+      },
+      status: "completed"
+    });
+    
+    // Add participants to Carrier Deal challenge
+    await this.joinChallenge({
+      userId: davidThompson.id,
+      challengeId: carrierDealChallenge.id,
+      joinedAt: new Date(),
+      progress: {
+        currentValue: 875000,
+        targetValue: 1000000
+      },
+      status: "in_progress"
+    });
+    
+    await this.joinChallenge({
+      userId: jamesMurphy.id, 
+      challengeId: carrierDealChallenge.id,
+      joinedAt: new Date(),
+      progress: {
+        currentValue: 0,
+        targetValue: 1000000
+      },
+      status: "in_progress"
+    });
+    
+    // Add points for users based on real sales performance
     await this.addPointTransaction({
-      userId: alexMorgan.id,
-      amount: 750,
-      description: "Closed deals bonus",
+      userId: robertGarcia.id,
+      amount: 950,
+      description: "Enterprise customer acquisition bonus",
       transactionType: "reward",
       referenceId: null,
       metadata: null
     });
     
-    // Award user with a reward
+    await this.addPointTransaction({
+      userId: lisaWilliams.id,
+      amount: 600,
+      description: "Quarterly sales incentive",
+      transactionType: "reward",
+      referenceId: null,
+      metadata: null
+    });
+    
+    await this.addPointTransaction({
+      userId: davidThompson.id,
+      amount: 1250,
+      description: "Carrier contract extension bonus",
+      transactionType: "reward",
+      referenceId: null,
+      metadata: null
+    });
+    
+    await this.addPointTransaction({
+      userId: michellePatel.id,
+      amount: 500,
+      description: "Regional expansion incentive",
+      transactionType: "reward",
+      referenceId: null,
+      metadata: null
+    });
+    
+    // Award users with rewards
     await this.awardUserReward({
-      userId: alexMorgan.id,
+      userId: robertGarcia.id,
       rewardId: giftCardReward.id,
       awardedAt: new Date(),
       status: "pending",
-      metadata: { email: "alex.morgan@example.com" }
+      metadata: { email: "robert.garcia@ispcompany.com" }
+    });
+    
+    await this.awardUserReward({
+      userId: davidThompson.id,
+      rewardId: trainingWorkshop.id,
+      awardedAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 14), // 14 days ago
+      status: "redeemed",
+      redeemedAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 7), // 7 days ago
+      metadata: { email: "david.thompson@ispcompany.com" }
     });
   }
   
