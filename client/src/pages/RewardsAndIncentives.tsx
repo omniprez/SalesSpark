@@ -101,10 +101,24 @@ const RewardsAndIncentives = () => {
   const { toast } = useToast();
   const [activeTab, setActiveTab] = useState("overview");
   
+  // Function to handle query errors
+  const handleQueryError = (error: Error) => {
+    console.error("Error fetching rewards data:", error);
+    // If authentication error, show a toast
+    if (error.message.includes('Authentication required')) {
+      toast({
+        title: "Authentication Required",
+        description: "Please log in to view rewards and incentives",
+        variant: "destructive",
+      });
+    }
+  };
+
   // Fetch rewards and incentives data
   const { data, isLoading, error, refetch } = useQuery<RewardsAndIncentivesData>({
     queryKey: ['/api/rewards-and-incentives'],
     staleTime: 1000 * 60 * 5, // 5 minutes
+    retry: 1, // Only retry once to prevent excessive failed requests
   });
   
   // Handle redemption of rewards

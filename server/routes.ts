@@ -34,7 +34,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     console.log("Auth middleware triggered");
     console.log("Session ID:", req.session?.id);
     console.log("Session user:", req.session?.user);
-    console.log("Cookies:", req.cookies);
     
     // First check for session-based auth
     if (req.session && req.session.user) {
@@ -48,32 +47,60 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const userId = req.cookies.user_id;
       console.log("User ID found in cookie:", userId);
       
-      storage.getUser(parseInt(userId))
-        .then(user => {
-          if (user) {
-            console.log("User found in storage from cookie auth:", user.id, user.username);
-            req.user = { 
-              id: user.id, 
-              username: user.username,
-              name: user.name,
-              role: user.role
-            };
-            return next();
-          }
-          console.error("User ID from cookie not found in database:", userId);
-          return res.status(401).json({ 
+      try {
+        const parsedUserId = parseInt(userId);
+        if (isNaN(parsedUserId)) {
+          console.error("Invalid user ID format in cookie:", userId);
+          return res.status(401).json({
             error: 'Invalid authentication',
-            reason: 'User not found in database'
+            reason: 'Invalid user ID format in cookie'
           });
-        })
-        .catch(err => {
-          console.error("Auth middleware error during cookie auth:", err);
-          return res.status(500).json({ 
-            error: 'Server error',
-            message: err instanceof Error ? err.message : 'Unknown error'
+        }
+        
+        storage.getUser(parsedUserId)
+          .then(user => {
+            if (user) {
+              console.log("User found in storage from cookie auth:", user.id, user.username);
+              
+              // Refresh the session with the user info
+              if (req.session) {
+                req.session.user = {
+                  id: user.id,
+                  username: user.username,
+                  name: user.name,
+                  role: user.role
+                };
+              }
+              
+              req.user = { 
+                id: user.id, 
+                username: user.username,
+                name: user.name,
+                role: user.role
+              };
+              return next();
+            }
+            console.error("User ID from cookie not found in database:", userId);
+            return res.status(401).json({ 
+              error: 'Invalid authentication',
+              reason: 'User not found in database'
+            });
+          })
+          .catch(err => {
+            console.error("Auth middleware error during cookie auth:", err);
+            return res.status(500).json({ 
+              error: 'Server error',
+              message: err instanceof Error ? err.message : 'Unknown error'
+            });
           });
+        return;
+      } catch (error) {
+        console.error("Error processing cookie auth:", error);
+        return res.status(401).json({
+          error: 'Invalid authentication',
+          reason: 'Error processing cookie authentication'
         });
-      return;
+      }
     }
     
     // Fallback to Replit auth headers for development
@@ -82,21 +109,42 @@ export async function registerRoutes(app: Express): Promise<Server> {
     
     if (userId && username) {
       console.log("User authenticated via Replit headers:", userId, username);
-      req.user = { 
-        id: parseInt(userId as string), 
-        username: username as string 
-      };
-      return next();
+      
+      try {
+        const parsedUserId = parseInt(userId as string);
+        if (isNaN(parsedUserId)) {
+          console.error("Invalid user ID format in Replit headers:", userId);
+          return res.status(401).json({
+            error: 'Invalid authentication',
+            reason: 'Invalid user ID format in Replit headers'
+          });
+        }
+        
+        req.user = { 
+          id: parsedUserId, 
+          username: username as string 
+        };
+        return next();
+      } catch (error) {
+        console.error("Error processing Replit header auth:", error);
+        return res.status(401).json({
+          error: 'Invalid authentication',
+          reason: 'Error processing Replit header authentication'
+        });
+      }
     }
     
     console.error("No authentication method succeeded");
     return res.status(401).json({ 
-      error: 'Not authenticated',
-      session: req.session ? "exists" : "missing",
-      cookie: req.cookies && req.cookies.user_id ? "exists" : "missing",
-      headers: {
-        replitUserId: userId ? "exists" : "missing",
-        replitUsername: username ? "exists" : "missing"
+      error: 'Authentication required',
+      details: 'You must be logged in to access this resource',
+      debug: {
+        session: req.session ? { id: req.session.id, hasUser: !!req.session.user } : "missing",
+        cookie: req.cookies ? Object.keys(req.cookies) : "missing",
+        headers: {
+          replitUserId: userId ? "exists" : "missing",
+          replitUsername: username ? "exists" : "missing"
+        }
       }
     });
   };
