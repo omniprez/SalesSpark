@@ -30,11 +30,12 @@ export default function Login() {
         body: JSON.stringify(formData),
       });
 
+      const data = await response.json();
+      
       if (response.ok) {
         setLocation('/');
       } else {
-        const data = await response.json();
-        setError(data.message || 'Login failed');
+        setError(data.message || 'Invalid username or password');
       }
     } catch (err) {
       setError('An error occurred. Please try again.');
@@ -90,6 +91,9 @@ export default function Login() {
                 'Sign In'
               )}
             </Button>
+            <div className="text-sm text-center text-gray-500">
+              Try username: alex.morgan, password: password
+            </div>
           </form>
         </CardContent>
       </Card>
