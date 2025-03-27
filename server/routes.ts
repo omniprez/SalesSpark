@@ -235,6 +235,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
+  // Add test endpoint
+  app.get("/api/test", (req, res) => {
+    res.json({ status: "ok", message: "Server is responding" });
+  });
+
   // Create HTTP server
   const httpServer = createServer(app);
   
