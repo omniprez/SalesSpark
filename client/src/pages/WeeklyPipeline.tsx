@@ -28,6 +28,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Deal, User, Customer, Target as SalesTarget, insertDealSchema } from '@shared/schema';
+import { z } from 'zod';
 
 // Helper functions for date manipulation
 const getWeekDates = (date = new Date()) => {
@@ -481,17 +482,34 @@ interface NewDealDialogProps {
 function NewDealDialog({ open, onOpenChange, selectedUser, customers, onDealCreated }: NewDealDialogProps) {
   const { toast } = useToast();
   
+  // Modified schema to handle string inputs and convert them
+  const formSchema = insertDealSchema
+    .extend({
+      value: z.preprocess(
+        (val) => (val === '' ? 0 : Number(val)),
+        z.number().min(0, { message: "Value must be a positive number" })
+      ),
+      gpPercentage: z.preprocess(
+        (val) => (val === '' ? null : Number(val)),
+        z.number().min(0).max(100).nullable().optional()
+      ),
+      customerId: z.preprocess(
+        (val) => (typeof val === 'string' ? parseInt(val) : val),
+        z.number().min(1, { message: "Please select a customer" })
+      )
+    });
+  
   // Setup form with validation
-  const form = useForm({
-    resolver: zodResolver(insertDealSchema),
+  const form = useForm<any>({
+    resolver: zodResolver(formSchema),
     defaultValues: {
       name: "",
-      value: 0,
+      value: "",
       category: "wireless",
       stage: "prospecting",
-      customerId: 0,
+      customerId: "",
       userId: selectedUser || 0,
-      gpPercentage: 0,
+      gpPercentage: "",
       region: "",
       clientType: "B2B",
       dealType: "new"
@@ -530,15 +548,6 @@ function NewDealDialog({ open, onOpenChange, selectedUser, customers, onDealCrea
   });
   
   function onSubmit(data: any) {
-    // Convert value to number
-    data.value = parseFloat(data.value);
-    if (data.gpPercentage) {
-      data.gpPercentage = parseFloat(data.gpPercentage);
-    }
-    
-    // Convert customerId to number
-    data.customerId = parseInt(data.customerId);
-    
     // Ensure userId is set
     if (!data.userId && selectedUser) {
       data.userId = selectedUser;
@@ -549,7 +558,7 @@ function NewDealDialog({ open, onOpenChange, selectedUser, customers, onDealCrea
   
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[600px]">
+      <DialogContent className="sm:max-w-[500px]">
         <DialogHeader>
           <DialogTitle>Create New Deal</DialogTitle>
           <DialogDescription>
@@ -558,8 +567,8 @@ function NewDealDialog({ open, onOpenChange, selectedUser, customers, onDealCrea
         </DialogHeader>
         
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 py-4">
-            <div className="grid grid-cols-2 gap-4">
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+            <div className="grid grid-cols-2 gap-3">
               <FormField
                 control={form.control}
                 name="name"
@@ -582,10 +591,7 @@ function NewDealDialog({ open, onOpenChange, selectedUser, customers, onDealCrea
                     <FormLabel>Deal Value ($)</FormLabel>
                     <FormControl>
                       <Input 
-                        type="number" 
-                        placeholder="10000"
-                        min={0}
-                        step={1000}
+                        placeholder="5000"
                         {...field} 
                       />
                     </FormControl>
@@ -595,7 +601,7 @@ function NewDealDialog({ open, onOpenChange, selectedUser, customers, onDealCrea
               />
             </div>
             
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-2 gap-3">
               <FormField
                 control={form.control}
                 name="customerId"
@@ -604,7 +610,7 @@ function NewDealDialog({ open, onOpenChange, selectedUser, customers, onDealCrea
                     <FormLabel>Customer</FormLabel>
                     <Select 
                       onValueChange={field.onChange} 
-                      defaultValue={field.value.toString()}
+                      defaultValue={field.value?.toString()}
                     >
                       <FormControl>
                         <SelectTrigger>
@@ -651,7 +657,7 @@ function NewDealDialog({ open, onOpenChange, selectedUser, customers, onDealCrea
               />
             </div>
             
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-2 gap-3">
               <FormField
                 control={form.control}
                 name="stage"
@@ -689,10 +695,7 @@ function NewDealDialog({ open, onOpenChange, selectedUser, customers, onDealCrea
                     <FormLabel>GP % (Optional)</FormLabel>
                     <FormControl>
                       <Input 
-                        type="number" 
                         placeholder="25" 
-                        min={0}
-                        max={100}
                         {...field} 
                       />
                     </FormControl>
@@ -702,7 +705,7 @@ function NewDealDialog({ open, onOpenChange, selectedUser, customers, onDealCrea
               />
             </div>
             
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-2 gap-3">
               <FormField
                 control={form.control}
                 name="region"
@@ -770,7 +773,7 @@ function NewDealDialog({ open, onOpenChange, selectedUser, customers, onDealCrea
               )}
             />
             
-            <DialogFooter>
+            <DialogFooter className="pt-2">
               <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
                 Cancel
               </Button>
