@@ -1485,17 +1485,33 @@ export class MemStorage implements IStorage {
 
   async getChallenges(active?: boolean): Promise<Challenge[]> {
     let challenges = Array.from(this.challenges.values());
+    console.log(`getChallenges called: Found ${challenges.length} challenges in storage`);
+    console.log(`Challenge details: ${JSON.stringify(challenges.map(c => ({ id: c.id, name: c.name, status: c.status })))}`);
     
     if (active !== undefined) {
       const now = new Date();
+      console.log(`Filtering for active=${active}, current date: ${now.toISOString()}`);
+      
       challenges = challenges.filter(challenge => {
+        // For challenge dates, ensure they are Date objects
+        const startDate = challenge.startDate instanceof Date ? 
+          challenge.startDate : new Date(challenge.startDate);
+        const endDate = challenge.endDate instanceof Date ? 
+          challenge.endDate : new Date(challenge.endDate);
+        
+        console.log(`Challenge ${challenge.id}: status=${challenge.status}, startDate=${startDate.toISOString()}, endDate=${endDate.toISOString()}`);
+        
         const isActive = challenge.status === 'active' &&
-                        challenge.startDate <= now &&
-                        challenge.endDate >= now;
-        return active ? isActive : !isActive;
+                        startDate <= now &&
+                        endDate >= now;
+        
+        console.log(`Challenge ${challenge.id} isActive: ${isActive}`);
+        
+        return active === isActive; // simplified logic - if active is true, return active challenges, otherwise return inactive ones
       });
     }
     
+    console.log(`getChallenges returning ${challenges.length} challenges after filtering`);
     return challenges;
   }
 

@@ -387,6 +387,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
+  // Teams routes
+  app.get("/api/teams", async (req, res) => {
+    try {
+      const teams = await storage.getTeams();
+      res.json(teams);
+    } catch (error) {
+      console.error("Error fetching teams:", error);
+      res.status(500).json({ error: "Failed to fetch teams" });
+    }
+  });
+  
   app.get("/api/users/:id", async (req, res) => {
     try {
       const userId = parseInt(req.params.id);
@@ -787,8 +798,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   app.get("/api/challenges", async (req, res) => {
     try {
-      const activeOnly = req.query.active === 'true';
+      // Default to true (active challenges) if not specified
+      const activeOnly = req.query.active === undefined ? true : req.query.active === 'true';
+      console.log(`Fetching challenges with activeOnly=${activeOnly}`);
+      
       const challenges = await storage.getChallenges(activeOnly);
+      console.log(`Returning ${challenges.length} challenges`);
+      
       res.json(challenges);
     } catch (error) {
       console.error("Error fetching challenges:", error);
