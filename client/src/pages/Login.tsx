@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Loader2, WifiIcon } from "lucide-react";
 import { login, checkAuth } from '../lib/auth';
 import { useToast } from '@/hooks/use-toast';
+import { queryClient } from '../lib/queryClient';
 import { Alert, AlertDescription } from "@/components/ui/alert";
 
 export default function Login() {
@@ -35,7 +36,8 @@ export default function Login() {
           
           // Add small delay to show the "already logged in" message
           setTimeout(() => {
-            window.location.href = '/';
+            // Use setLocation from wouter instead of window.location
+            setLocation('/');
           }, 1500);
         }
       } catch (error) {
@@ -70,8 +72,11 @@ export default function Login() {
         localStorage.setItem('isLoggedIn', 'true');
         localStorage.setItem('userId', result.user.id.toString());
         
-        // Redirect to dashboard - fixed URL
-        window.location.href = '/';
+        // Invalidate queries to force refetch of authenticated data
+        queryClient.invalidateQueries();
+        
+        // Use setLocation to navigate without breaking React components
+        setLocation('/');
         return;
       } else {
         console.error("Login failed:", result.message);

@@ -184,71 +184,70 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Auth check route
-  app.get("/api/auth/check", (req: Request, res: Response) => {
+  app.get("/api/auth/check", async (req: Request, res: Response) => {
     console.log("Auth check request received");
     console.log("Session ID:", req.session?.id);
     console.log("Session user:", req.session?.user);
+    console.log("Headers:", req.headers);
     console.log("Cookies:", req.cookies);
     
-    // First check session-based auth
-    if (req.session && req.session.user) {
-      console.log("User authenticated via session:", req.session.user);
-      return res.json({ 
-        authenticated: true, 
-        user: req.session.user,
-        authMethod: 'session'
-      });
-    }
-    
-    // Then check cookie-based auth
-    if (req.cookies && req.cookies.user_id) {
-      const userId = parseInt(req.cookies.user_id);
-      
-      if (isNaN(userId)) {
-        console.log("Invalid user_id cookie value");
-        return res.status(401).json({ authenticated: false });
+    try {
+      // First check session-based auth
+      if (req.session && req.session.user) {
+        console.log("User authenticated via session:", req.session.user);
+        return res.json({ 
+          authenticated: true, 
+          user: req.session.user,
+          authMethod: 'session'
+        });
       }
       
-      storage.getUser(userId)
-        .then(user => {
-          if (user) {
-            const userInfo = { 
-              id: user.id, 
-              username: user.username,
-              name: user.name,
-              role: user.role
-            };
-            
-            // Update session with user info for future requests
-            if (req.session) {
-              req.session.user = userInfo;
-            }
-            
-            console.log("User authenticated via cookie:", userInfo);
-            return res.json({ 
-              authenticated: true, 
-              user: userInfo,
-              authMethod: 'cookie'
-            });
-          } else {
-            console.log("No user found for cookie ID:", userId);
-            res.clearCookie('user_id');
-            return res.status(401).json({ authenticated: false });
+      // Then check cookie-based auth
+      if (req.cookies && req.cookies.user_id) {
+        const userId = parseInt(req.cookies.user_id);
+        
+        if (isNaN(userId)) {
+          console.log("Invalid user_id cookie value");
+          return res.status(401).json({ authenticated: false });
+        }
+        
+        const user = await storage.getUser(userId);
+        if (user) {
+          const userInfo = { 
+            id: user.id, 
+            username: user.username,
+            name: user.name,
+            role: user.role
+          };
+          
+          // Update session with user info for future requests
+          if (req.session) {
+            req.session.user = userInfo;
           }
-        })
-        .catch(err => {
-          console.error("Error during cookie auth check:", err);
-          return res.status(500).json({ 
-            authenticated: false,
-            error: 'Server error during authentication check' 
+          
+          console.log("User authenticated via cookie:", userInfo);
+          return res.json({ 
+            authenticated: true, 
+            user: userInfo,
+            authMethod: 'cookie'
           });
-        });
-      return;
+        } else {
+          console.log("No user found for cookie ID:", userId);
+          res.clearCookie('user_id');
+          return res.status(401).json({ authenticated: false });
+        }
+      }
+      
+      // If no authentication found
+      console.log("No authentication found");
+      return res.status(401).json({ authenticated: false });
+    } catch (err) {
+      console.error("Error during authentication check:", err);
+      return res.status(500).json({ 
+        authenticated: false,
+        error: 'Server error during authentication check' 
+      });
     }
-    
-    // If no authentication found
-    console.log("No authentication found");
-    return res.status(401).json({ authenticated: false });
   });
   
   // Logout route
