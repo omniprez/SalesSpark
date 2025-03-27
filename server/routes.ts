@@ -6,16 +6,42 @@ import { ZodError } from "zod";
 import { fromZodError } from "zod-validation-error";
 
 export async function registerRoutes(app: Express): Promise<Server> {
-  // Get current user
-  app.get("/api/me", async (req, res) => {
-    // For demo purposes, return first user (normally would use authentication)
-    const users = await storage.getUsers();
-    if (users.length > 0) {
-      const user = users[0];
-      res.json(user);
-    } else {
-      res.status(404).json({ error: "No users found" });
+  // Auth middleware
+  const authMiddleware = (req: any, res: any, next: any) => {
+    const userId = req.headers['x-replit-user-id'];
+    const username = req.headers['x-replit-user-name'];
+    
+    if (!userId || !username) {
+      return res.status(401).json({ error: 'Not authenticated' });
     }
+    
+    req.user = { id: userId, username };
+    next();
+  };
+
+  // Get current user
+  app.get("/api/me", authMiddleware, async (req, res) => {
+    const { user } = req;
+    const dbUser = await storage.getUser(parseInt(user.id));
+    
+    if (!dbUser) {
+      // Create new user if first time
+      const newUser = await storage.createUser({
+        username: user.username,
+        name: user.username,
+        email: `${user.username}@replit.com`,
+        password: '', // Not needed with Replit Auth
+        role: 'user',
+      });
+      res.json(newUser);
+    } else {
+      res.json(dbUser);
+    }
+  });
+
+  // Auth check route
+  app.get("/api/auth/check", authMiddleware, (req, res) => {
+    res.json({ authenticated: true, user: req.user });
   });
   
   // Dashboard routes

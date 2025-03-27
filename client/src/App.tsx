@@ -10,6 +10,9 @@ import TeamManagement from "@/pages/TeamManagement";
 import Achievements from "@/pages/Achievements";
 import TestPage from "@/pages/TestPage";
 import Layout from "@/components/Layout";
+import Login from "./pages/Login"; // Added Login page import
+import { checkAuth } from "./lib/auth"; // Added auth middleware import
+
 
 // Simple component to debug rendering issues
 function SimpleDebugView() {
@@ -49,11 +52,12 @@ function SimpleDebugView() {
 function Router() {
   return (
     <Switch>
-      <Route path="/" component={Dashboard} />
-      <Route path="/pipeline" component={SalesPipeline} />
-      <Route path="/leaderboard" component={Leaderboard} />
-      <Route path="/team" component={TeamManagement} />
-      <Route path="/achievements" component={Achievements} />
+      <Route path="/login" component={Login} /> {/* Added login route */}
+      <Route path="/" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+      <Route path="/pipeline" element={<ProtectedRoute><SalesPipeline /></ProtectedRoute>} />
+      <Route path="/leaderboard" element={<ProtectedRoute><Leaderboard /></ProtectedRoute>} />
+      <Route path="/team" element={<ProtectedRoute><TeamManagement /></ProtectedRoute>} />
+      <Route path="/achievements" element={<ProtectedRoute><Achievements /></ProtectedRoute>} />
       <Route path="/debug" component={SimpleDebugView} />
       <Route path="/test" component={TestPage} />
       <Route component={NotFound} />
@@ -61,9 +65,16 @@ function Router() {
   );
 }
 
+function ProtectedRoute({ children }) {
+  if (!checkAuth()) {
+    return <Navigate to="/login" />;
+  }
+  return children;
+}
+
 function App() {
   console.log("App component rendering");
-  
+
   // Alternative rendering approach for better stability
   return (
     <QueryClientProvider client={queryClient}>
@@ -72,7 +83,7 @@ function App() {
           <h1>ISP Sales Management Platform</h1>
           <p>Loading application...</p>
         </div>
-        
+
         {/* Main application content */}
         <Layout>
           <Router />
