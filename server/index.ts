@@ -56,13 +56,12 @@ app.use((req, res, next) => {
     serveStatic(app);
   }
 
-  // Use port 3000 for Autoscale compatibility
-  const port = process.env.PORT || 3000;
-  const host = '0.0.0.0';  // Always bind to all interfaces in Replit
-  
-  // Use the exact listen format that Replit expects to detect the port
-  server.listen(port, host, () => {
-    log(`Server running at http://${host}:${port}`);
-    log(`The application should be visible in the Replit webview tab`);
-  });
-})();
+// Use port 5000 for main HTTP traffic (mapped to port 80 externally)
+const port = process.env.PORT || 5000;
+const host = '0.0.0.0';  // Always bind to all interfaces in Replit
+
+// Use the exact listen format that Replit expects to detect the port
+server.listen(port, host, () => {
+  log(`Server running at http://${host}:${port}`);
+  log(`The application should be visible in the Replit webview tab`);
+});
