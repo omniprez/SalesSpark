@@ -56,8 +56,8 @@ app.use((req, res, next) => {
     serveStatic(app);
   }
 
-  // Use port 5000 for Replit workflow compatibility
-  const port = 5000;
+  // Use port 3000 for Autoscale compatibility
+  const port = process.env.PORT || 3000;
   const host = '0.0.0.0';  // Always bind to all interfaces in Replit
   
   // Use the exact listen format that Replit expects to detect the port
