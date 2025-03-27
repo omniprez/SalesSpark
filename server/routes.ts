@@ -31,8 +31,14 @@ declare module 'express' {
 export async function registerRoutes(app: Express): Promise<Server> {
   // Auth middleware - supports both session and Replit auth
   const authMiddleware = (req: Request, res: Response, next: NextFunction) => {
+    console.log("Auth middleware triggered");
+    console.log("Session ID:", req.session?.id);
+    console.log("Session user:", req.session?.user);
+    console.log("Cookies:", req.cookies);
+    
     // First check for session-based auth
     if (req.session && req.session.user) {
+      console.log("User found in session:", req.session.user);
       req.user = req.session.user;
       return next();
     }
@@ -40,9 +46,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
     // Fallback to cookie-based auth
     if (req.cookies && req.cookies.user_id) {
       const userId = req.cookies.user_id;
+      console.log("User ID found in cookie:", userId);
+      
       storage.getUser(parseInt(userId))
         .then(user => {
           if (user) {
+            console.log("User found in storage from cookie auth:", user.id, user.username);
             req.user = { 
               id: user.id, 
               username: user.username,
@@ -51,11 +60,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
             };
             return next();
           }
-          return res.status(401).json({ error: 'Invalid authentication' });
+          console.error("User ID from cookie not found in database:", userId);
+          return res.status(401).json({ 
+            error: 'Invalid authentication',
+            reason: 'User not found in database'
+          });
         })
         .catch(err => {
-          console.error("Auth middleware error:", err);
-          return res.status(500).json({ error: 'Server error' });
+          console.error("Auth middleware error during cookie auth:", err);
+          return res.status(500).json({ 
+            error: 'Server error',
+            message: err instanceof Error ? err.message : 'Unknown error'
+          });
         });
       return;
     }
@@ -65,6 +81,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     const username = req.headers['x-replit-user-name'];
     
     if (userId && username) {
+      console.log("User authenticated via Replit headers:", userId, username);
       req.user = { 
         id: parseInt(userId as string), 
         username: username as string 
@@ -72,7 +89,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       return next();
     }
     
-    return res.status(401).json({ error: 'Not authenticated' });
+    console.error("No authentication method succeeded");
+    return res.status(401).json({ 
+      error: 'Not authenticated',
+      session: req.session ? "exists" : "missing",
+      cookie: req.cookies && req.cookies.user_id ? "exists" : "missing",
+      headers: {
+        replitUserId: userId ? "exists" : "missing",
+        replitUsername: username ? "exists" : "missing"
+      }
+    });
   };
 
   // Get current user
@@ -510,12 +536,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Rewards and Incentives API routes
   app.get("/api/rewards-and-incentives", authMiddleware, async (req, res) => {
     try {
+      console.log("Rewards and Incentives API request received");
+      console.log("Session ID:", req.session?.id);
+      console.log("Session user:", req.session?.user);
+      console.log("Request user from middleware:", req.user);
+      
       const userId = req.user?.id;
+      
+      if (!userId) {
+        console.error("User ID not found in request, auth middleware may not be working correctly");
+        return res.status(401).json({ 
+          error: "Authentication required", 
+          authStatus: "failed",
+          session: req.session ? "exists" : "missing",
+          user: req.user ? "exists" : "missing" 
+        });
+      }
+      
+      console.log("Fetching rewards data for user ID:", userId);
       const data = await storage.getRewardsAndIncentivesData(userId);
-      res.json(data);
+      console.log("Rewards data retrieved successfully");
+      
+      return res.json(data);
     } catch (error) {
       console.error("Error fetching rewards data:", error);
-      res.status(500).json({ error: "Failed to fetch rewards data" });
+      return res.status(500).json({ 
+        error: "Failed to fetch rewards data",
+        message: error instanceof Error ? error.message : "Unknown error"
+      });
     }
   });
   

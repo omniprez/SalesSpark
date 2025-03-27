@@ -169,6 +169,9 @@ const RewardsAndIncentives = () => {
   }
   
   if (error) {
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    console.error("Rewards & Incentives error:", error);
+    
     return (
       <div className="container mx-auto py-6">
         <h1 className="text-2xl font-bold mb-6">Rewards & Incentives</h1>
@@ -179,6 +182,18 @@ const RewardsAndIncentives = () => {
               <p className="text-sm text-muted-foreground mt-2">
                 There was a problem loading the rewards and incentives data.
               </p>
+              <p className="text-xs text-destructive mt-2">
+                {errorMessage.includes('401') ? 'Authentication error. Please try logging out and logging back in.' : errorMessage}
+              </p>
+              <div className="mt-4">
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={() => refetch()}
+                >
+                  Try Again
+                </Button>
+              </div>
             </div>
           </CardContent>
         </Card>
