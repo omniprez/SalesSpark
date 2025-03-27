@@ -9,6 +9,7 @@ import Leaderboard from "@/pages/Leaderboard";
 import TeamManagement from "@/pages/TeamManagement";
 import Achievements from "@/pages/Achievements";
 import TestPage from "@/pages/TestPage";
+import Debug from "@/pages/Debug";
 import Layout from "@/components/Layout";
 import Login from './pages/Login';
 import AuthGuard from './components/AuthGuard';
@@ -53,6 +54,7 @@ function Router() {
   return (
     <Switch>
       <Route path="/login" component={Login} />
+      <Route path="/debug" component={Debug} />
       <Route>
         <AuthGuard>
           <Layout>
@@ -62,7 +64,7 @@ function Router() {
               <Route path="/leaderboard" component={Leaderboard} />
               <Route path="/team" component={TeamManagement} />
               <Route path="/achievements" component={Achievements} />
-              <Route path="/debug" component={SimpleDebugView} />
+              <Route path="/simpledebug" component={SimpleDebugView} />
               <Route path="/test" component={TestPage} />
               <Route component={NotFound} />
             </Switch>
