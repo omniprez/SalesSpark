@@ -106,13 +106,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
     const { username, password } = req.body;
     
     try {
+      console.log("Processing login request for user:", username);
+      
+      if (!username || !password) {
+        console.log("Missing login credentials");
+        return res.status(400).json({ 
+          success: false,
+          message: 'Username and password are required' 
+        });
+      }
+      
       const user = await storage.getUserByUsername(username);
       console.log("Login attempt for user:", username);
-      console.log("User found in database:", user);
+      console.log("User found in database:", user ? "Yes" : "No");
       
       if (!user || user.password !== password) {
-        console.log("Invalid credentials");
-        return res.status(401).json({ message: 'Invalid username or password' });
+        console.log("Invalid credentials for user:", username);
+        return res.status(401).json({ 
+          success: false,
+          message: 'Invalid username or password' 
+        });
       }
 
       // Store user info in session
@@ -123,16 +136,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
         role: user.role
       };
       
-      // Set in both session and cookie for compatibility
+      // Set in session
       if (req.session) {
         req.session.user = userInfo;
+        console.log("User info stored in session:", req.session.id);
+        
+        // Force session save to ensure it's stored before responding
+        req.session.save((err) => {
+          if (err) {
+            console.error("Error saving session:", err);
+          }
+        });
+      } else {
+        console.warn("Session object not available");
       }
       
-      // Also set cookie as fallback
-      res.cookie('user_id', user.id, { 
+      // Also set cookie as fallback for older versions
+      res.cookie('user_id', user.id.toString(), { 
         httpOnly: true,
         secure: process.env.NODE_ENV === 'production',
-        sameSite: 'lax'
+        sameSite: 'lax',
+        maxAge: 24 * 60 * 60 * 1000 // 24 hours
       });
 
       console.log("Login successful for user:", username);
@@ -142,33 +166,121 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
     } catch (error) {
       console.error("Login error:", error);
-      res.status(500).json({ message: 'Server error' });
+      res.status(500).json({ 
+        success: false,
+        message: 'An error occurred during login. Please try again.'
+      });
     }
   });
 
   // Auth check route
-  app.get("/api/auth/check", authMiddleware, (req: Request, res: Response) => {
-    if (!req.user) {
-      return res.status(401).json({ authenticated: false });
+  app.get("/api/auth/check", (req: Request, res: Response) => {
+    console.log("Auth check request received");
+    console.log("Session ID:", req.session?.id);
+    console.log("Session user:", req.session?.user);
+    console.log("Cookies:", req.cookies);
+    
+    // First check session-based auth
+    if (req.session && req.session.user) {
+      console.log("User authenticated via session:", req.session.user);
+      return res.json({ 
+        authenticated: true, 
+        user: req.session.user,
+        authMethod: 'session'
+      });
     }
-    res.json({ authenticated: true, user: req.user });
+    
+    // Then check cookie-based auth
+    if (req.cookies && req.cookies.user_id) {
+      const userId = parseInt(req.cookies.user_id);
+      
+      if (isNaN(userId)) {
+        console.log("Invalid user_id cookie value");
+        return res.status(401).json({ authenticated: false });
+      }
+      
+      storage.getUser(userId)
+        .then(user => {
+          if (user) {
+            const userInfo = { 
+              id: user.id, 
+              username: user.username,
+              name: user.name,
+              role: user.role
+            };
+            
+            // Update session with user info for future requests
+            if (req.session) {
+              req.session.user = userInfo;
+            }
+            
+            console.log("User authenticated via cookie:", userInfo);
+            return res.json({ 
+              authenticated: true, 
+              user: userInfo,
+              authMethod: 'cookie'
+            });
+          } else {
+            console.log("No user found for cookie ID:", userId);
+            res.clearCookie('user_id');
+            return res.status(401).json({ authenticated: false });
+          }
+        })
+        .catch(err => {
+          console.error("Error during cookie auth check:", err);
+          return res.status(500).json({ 
+            authenticated: false,
+            error: 'Server error during authentication check' 
+          });
+        });
+      return;
+    }
+    
+    // If no authentication found
+    console.log("No authentication found");
+    return res.status(401).json({ authenticated: false });
   });
   
   // Logout route
   app.post("/api/auth/logout", (req: Request, res: Response) => {
+    console.log("Logout request received");
+    console.log("Session ID:", req.session?.id);
+    console.log("Session user:", req.session?.user);
+    
     // Clear session
     if (req.session) {
+      const sessionId = req.session.id;
       req.session.destroy((err) => {
         if (err) {
           console.error("Error destroying session:", err);
+        } else {
+          console.log("Session destroyed successfully:", sessionId);
         }
       });
     }
     
-    // Clear cookie
+    // Clear all auth cookies
     res.clearCookie('user_id');
+    res.clearCookie('isp_sales_sid');
     
-    res.json({ success: true });
+    // Use more secure settings for cookie clearing
+    res.clearCookie('user_id', { 
+      path: '/',
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax'
+    });
+    
+    res.clearCookie('isp_sales_sid', { 
+      path: '/',
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax'
+    });
+    
+    console.log("Cookies cleared during logout");
+    
+    res.json({ success: true, message: 'Logged out successfully' });
   });
   
   // Dashboard routes

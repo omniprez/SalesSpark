@@ -14,13 +14,19 @@ const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 app.use(cookieParser());
+// Configure session middleware
 app.use(session({
-  secret: 'isp-sales-platform-secret',
+  secret: 'isp-sales-platform-secret-key-2024',
   resave: false,
   saveUninitialized: false,
+  name: 'isp_sales_sid', // Custom name instead of default connect.sid
+  rolling: true, // Reset cookie expiration on each response
   cookie: { 
     secure: process.env.NODE_ENV === 'production',
-    maxAge: 24 * 60 * 60 * 1000 // 24 hours
+    httpOnly: true, // Prevent client-side JS from reading the cookie
+    sameSite: 'lax', // Provides CSRF protection
+    maxAge: 24 * 60 * 60 * 1000, // 24 hours
+    path: '/'
   }
 }));
 

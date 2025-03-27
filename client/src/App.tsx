@@ -75,12 +75,16 @@ function Router() {
 
 function App() {
   console.log("App component rendering");
+  
+  // Check if we have a stored login state
+  const isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
+  console.log("Initial login state:", isLoggedIn);
 
-  // Alternative rendering approach for better stability
   return (
     <QueryClientProvider client={queryClient}>
       <div className="app-container">
-        <div className="fallback-header">
+        {/* Only show this header during initial load, hide it once content is rendered */}
+        <div className="fallback-header" style={{ display: 'none' }}>
           <h1>ISP Sales Management Platform</h1>
           <p>Loading application...</p>
         </div>
