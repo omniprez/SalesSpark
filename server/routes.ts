@@ -582,6 +582,156 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
   
   // Rewards and Incentives API routes
+  // Development endpoint that doesn't require authentication for testing the UI
+  app.get("/api/rewards-and-incentives-demo", async (req, res) => {
+    try {
+      console.log("Demo rewards data requested (no auth required)");
+      // Use a default user ID for demo purposes
+      const demoUserId = 1;
+      
+      // Create a simple demo data object to avoid possible issues with the storage
+      // This ensures we can display something in the UI for testing purposes
+      const demoData = {
+        userPoints: 500,
+        userRecentTransactions: [
+          {
+            id: 1,
+            userId: 1,
+            amount: 100,
+            description: "Closed a deal",
+            transactionType: "reward",
+            createdAt: new Date().toISOString(),
+            referenceId: null,
+            metadata: null
+          },
+          {
+            id: 2,
+            userId: 1,
+            amount: 50,
+            description: "Completed onboarding",
+            transactionType: "reward",
+            createdAt: new Date(Date.now() - 86400000).toISOString(),
+            referenceId: null,
+            metadata: null
+          }
+        ],
+        availableRewards: [
+          {
+            id: 1,
+            name: "Coffee Gift Card",
+            description: "A $10 gift card for your favorite coffee shop",
+            pointCost: 200,
+            type: "gift_card",
+            category: "food_and_drink",
+            isAvailable: true,
+            image: null,
+            createdAt: new Date().toISOString()
+          },
+          {
+            id: 2,
+            name: "Extra Vacation Day",
+            description: "Get an extra day off",
+            pointCost: 1000,
+            type: "time_off",
+            category: "work_life_balance",
+            isAvailable: true,
+            image: null,
+            createdAt: new Date().toISOString()
+          }
+        ],
+        userAvailableRewards: [
+          {
+            id: 1,
+            name: "Coffee Gift Card",
+            description: "A $10 gift card for your favorite coffee shop",
+            pointCost: 200,
+            type: "gift_card",
+            category: "food_and_drink",
+            isAvailable: true,
+            image: null,
+            createdAt: new Date().toISOString()
+          }
+        ],
+        userRewards: [
+          {
+            id: 1,
+            userId: 1,
+            rewardId: 3,
+            status: "redeemed",
+            awardedAt: new Date(Date.now() - 604800000).toISOString(),
+            redeemedAt: new Date(Date.now() - 504800000).toISOString(),
+            expiresAt: null,
+            metadata: null
+          }
+        ],
+        activeChallenges: [
+          {
+            id: 1,
+            name: "March Sales Sprint",
+            description: "Close the most deals in March",
+            category: "sales",
+            status: "active",
+            startDate: new Date().toISOString(),
+            endDate: new Date(Date.now() + 2592000000).toISOString(),
+            criteria: { type: "number_of_deals", target: 10 },
+            rewardPoints: 500,
+            createdAt: new Date().toISOString()
+          }
+        ],
+        userChallenges: [
+          {
+            challenge: {
+              id: 1,
+              name: "March Sales Sprint",
+              description: "Close the most deals in March",
+              category: "sales",
+              status: "active",
+              startDate: new Date().toISOString(),
+              endDate: new Date(Date.now() + 2592000000).toISOString(),
+              criteria: { type: "number_of_deals", target: 10 },
+              rewardPoints: 500,
+              createdAt: new Date().toISOString()
+            },
+            participant: {
+              id: 1,
+              userId: 1,
+              challengeId: 1,
+              status: "in_progress",
+              joinedAt: new Date().toISOString(),
+              progress: { currentSales: 3 }
+            }
+          }
+        ],
+        totalRewards: 3,
+        totalActiveChallenges: 2,
+        totalRedeemed: 1,
+        rewardsByCategory: {
+          "gift_card": 2,
+          "time_off": 1
+        }
+      };
+      
+      console.log("Demo data created");
+      
+      // Explicitly set content type to ensure we get JSON, not HTML
+      res.setHeader('Content-Type', 'application/json');
+      res.setHeader('Cache-Control', 'no-cache');
+      
+      console.log("Sending demo data response");
+      return res.json(demoData);
+    } catch (error) {
+      console.error("Error in demo rewards endpoint:", error);
+      // Explicitly set content type for error responses too
+      res.setHeader('Content-Type', 'application/json');
+      res.setHeader('Cache-Control', 'no-cache');
+      return res.status(500).json({ 
+        error: "Failed to fetch demo rewards data",
+        message: error instanceof Error ? error.message : "Unknown error"
+      });
+    }
+  });
+
+  // Standard authenticated endpoint for production use
   app.get("/api/rewards-and-incentives", authMiddleware, async (req, res) => {
     try {
       console.log("Rewards and Incentives API request received");
@@ -813,6 +963,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Add test endpoint
   app.get("/api/test", (req, res) => {
     res.json({ status: "ok", message: "Server is responding" });
+  });
+  
+  // Add additional test endpoint for rewards demo
+  app.get("/api/demo-rewards-test", (req, res) => {
+    const demoData = {
+      status: "ok",
+      message: "Demo rewards test endpoint is working",
+      data: {
+        userPoints: 500,
+        userRecentTransactions: [
+          {
+            id: 1,
+            description: "Test transaction",
+            amount: 100,
+            transactionType: "reward"
+          }
+        ]
+      }
+    };
+    res.json(demoData);
   });
 
   // Add a route for a simple test HTML page to diagnose issues
