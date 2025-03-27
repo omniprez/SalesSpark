@@ -45,14 +45,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
     
     try {
       const user = await storage.getUserByUsername(username);
+      console.log("Login attempt for user:", username);
+      console.log("User found in database:", user);
       
       if (!user || user.password !== password) {
+        console.log("Invalid credentials");
         return res.status(401).json({ message: 'Invalid username or password' });
       }
 
-      // Set session
-      req.user = { id: user.id, username: user.username };
-      res.json({ success: true, user: { id: user.id, username: user.username } });
+      // Set session cookie
+      res.cookie('user_id', user.id, { 
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'lax'
+      });
+
+      console.log("Login successful for user:", username);
+      res.json({ 
+        success: true, 
+        user: { 
+          id: user.id, 
+          username: user.username,
+          name: user.name,
+          role: user.role
+        } 
+      });
     } catch (error) {
       console.error("Login error:", error);
       res.status(500).json({ message: 'Server error' });
