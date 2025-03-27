@@ -56,15 +56,17 @@ app.use((req, res, next) => {
     serveStatic(app);
   }
 
-  // Serve on the port that Replit expects
-  const port = process.env.PORT || 443;
-  const host = '0.0.0.0';
+  // ALWAYS serve the app on port 5000 for Replit workflows
+  // The workflow is configured to expect port 5000
+  const port = 5000;
+  const host = '0.0.0.0';  // Always bind to all interfaces in Replit
   
   server.listen({
-    port: Number(port),
+    port,
     host,
     reusePort: true,
   }, () => {
     log(`Server running at http://${host}:${port}`);
+    log(`The application should be visible in the Replit webview tab`);
   });
 })();
