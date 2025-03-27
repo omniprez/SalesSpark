@@ -73,6 +73,8 @@ interface Challenge {
     minRevenue?: number;
     targetRegion?: string;
     targetProduct?: string;
+    type?: string;
+    target?: number;
   };
   startDate: string;
   endDate: string;
@@ -114,142 +116,13 @@ const RewardsAndIncentives = () => {
     }
   };
 
-  // Fetch rewards and incentives data
-  // Use the simplest test endpoint to avoid issues with authentication and data formatting
-  const { data: testData } = useQuery({
-    queryKey: ['/api/test'],
+  // Fetch rewards and incentives data from the API
+  const { data, isLoading, error, refetch } = useQuery<RewardsAndIncentivesData>({
+    queryKey: ['/api/rewards-and-incentives'],
     staleTime: 1000 * 60 * 5, // 5 minutes
+    retry: 1,
+    onError: handleQueryError
   });
-
-  // Log the test data to verify API connectivity
-  console.log('Test endpoint response:', testData);
-
-  // Use demo data directly in the component for testing purposes
-  const demoData: RewardsAndIncentivesData = {
-    userPoints: 500,
-    userRecentTransactions: [
-      {
-        id: 1,
-        userId: 1,
-        amount: 100,
-        description: "Closed a deal",
-        transactionType: "reward",
-        createdAt: new Date().toISOString(),
-        referenceId: null,
-        metadata: null
-      },
-      {
-        id: 2,
-        userId: 1,
-        amount: 50,
-        description: "Completed onboarding",
-        transactionType: "reward",
-        createdAt: new Date(Date.now() - 86400000).toISOString(),
-        referenceId: null,
-        metadata: null
-      }
-    ],
-    availableRewards: [
-      {
-        id: 1,
-        name: "Coffee Gift Card",
-        description: "A $10 gift card for your favorite coffee shop",
-        pointCost: 200,
-        type: "gift_card",
-        category: "food_and_drink",
-        isAvailable: true,
-        image: null,
-        createdAt: new Date().toISOString()
-      },
-      {
-        id: 2,
-        name: "Extra Vacation Day",
-        description: "Get an extra day off",
-        pointCost: 1000,
-        type: "time_off",
-        category: "work_life_balance",
-        isAvailable: true,
-        image: null,
-        createdAt: new Date().toISOString()
-      }
-    ],
-    userAvailableRewards: [
-      {
-        id: 1,
-        name: "Coffee Gift Card",
-        description: "A $10 gift card for your favorite coffee shop",
-        pointCost: 200,
-        type: "gift_card",
-        category: "food_and_drink",
-        isAvailable: true,
-        image: null,
-        createdAt: new Date().toISOString()
-      }
-    ],
-    userRewards: [
-      {
-        id: 1,
-        userId: 1,
-        rewardId: 3,
-        status: "redeemed",
-        awardedAt: new Date(Date.now() - 604800000).toISOString(),
-        redeemedAt: new Date(Date.now() - 504800000).toISOString(),
-        expiresAt: null,
-        metadata: null
-      }
-    ],
-    activeChallenges: [
-      {
-        id: 1,
-        name: "March Sales Sprint",
-        description: "Close the most deals in March",
-        category: "sales",
-        status: "active",
-        startDate: new Date().toISOString(),
-        endDate: new Date(Date.now() + 2592000000).toISOString(),
-        criteria: { type: "number_of_deals", target: 10 },
-        rewardPoints: 500,
-        createdAt: new Date().toISOString()
-      }
-    ],
-    userChallenges: [
-      {
-        challenge: {
-          id: 1,
-          name: "March Sales Sprint",
-          description: "Close the most deals in March",
-          category: "sales",
-          status: "active",
-          startDate: new Date().toISOString(),
-          endDate: new Date(Date.now() + 2592000000).toISOString(),
-          criteria: { type: "number_of_deals", target: 10 },
-          rewardPoints: 500,
-          createdAt: new Date().toISOString()
-        },
-        participant: {
-          id: 1,
-          userId: 1,
-          challengeId: 1,
-          status: "in_progress",
-          joinedAt: new Date().toISOString(),
-          progress: { currentSales: 3 }
-        }
-      }
-    ],
-    totalRewards: 3,
-    totalActiveChallenges: 2,
-    totalRedeemed: 1,
-    rewardsByCategory: {
-      "gift_card": 2,
-      "time_off": 1
-    }
-  };
-  
-  // For debugging purposes, we'll use our hard-coded demo data
-  const data = demoData;
-  const isLoading = false;
-  const error = null;
-  const refetch = () => console.log('Refetch called');
   
   // Handle redemption of rewards
   const handleRedeemReward = async (rewardId: number) => {
