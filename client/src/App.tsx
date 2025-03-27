@@ -10,6 +10,8 @@ import TeamManagement from "@/pages/TeamManagement";
 import Achievements from "@/pages/Achievements";
 import TestPage from "@/pages/TestPage";
 import Layout from "@/components/Layout";
+import Login from './pages/Login';
+import AuthGuard from './components/AuthGuard';
 
 
 // Simple component to debug rendering issues
@@ -50,14 +52,23 @@ function SimpleDebugView() {
 function Router() {
   return (
     <Switch>
-      <Route path="/" component={Dashboard} />
-      <Route path="/pipeline" component={SalesPipeline} />
-      <Route path="/leaderboard" component={Leaderboard} />
-      <Route path="/team" component={TeamManagement} />
-      <Route path="/achievements" component={Achievements} />
-      <Route path="/debug" component={SimpleDebugView} />
-      <Route path="/test" component={TestPage} />
-      <Route component={NotFound} />
+      <Route path="/login" component={Login} />
+      <Route>
+        <AuthGuard>
+          <Layout>
+            <Switch>
+              <Route path="/" component={Dashboard} />
+              <Route path="/pipeline" component={SalesPipeline} />
+              <Route path="/leaderboard" component={Leaderboard} />
+              <Route path="/team" component={TeamManagement} />
+              <Route path="/achievements" component={Achievements} />
+              <Route path="/debug" component={SimpleDebugView} />
+              <Route path="/test" component={TestPage} />
+              <Route component={NotFound} />
+            </Switch>
+          </Layout>
+        </AuthGuard>
+      </Route>
     </Switch>
   );
 }
@@ -75,9 +86,7 @@ function App() {
         </div>
 
         {/* Main application content */}
-        <Layout>
-          <Router />
-        </Layout>
+        <Router />
         <Toaster />
       </div>
     </QueryClientProvider>
