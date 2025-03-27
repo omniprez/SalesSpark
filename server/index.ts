@@ -3,6 +3,7 @@ import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { type Server } from "http";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -82,7 +83,7 @@ server.on('error', (error) => {
 server.keepAliveTimeout = 65000;
 server.headersTimeout = 66000;
 
-server.listen(port, host, () => {
+server.listen(Number(port), host, () => {
   log(`Server running at http://${host}:${port}`);
   log(`The application should be visible in the Replit webview tab`);
 });

@@ -1,4 +1,4 @@
-import { Switch, Route } from "wouter";
+import { Switch, Route, useLocation } from "wouter";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
@@ -10,8 +10,6 @@ import TeamManagement from "@/pages/TeamManagement";
 import Achievements from "@/pages/Achievements";
 import TestPage from "@/pages/TestPage";
 import Layout from "@/components/Layout";
-import Login from "./pages/Login"; // Added Login page import
-import { checkAuth } from "./lib/auth"; // Added auth middleware import
 
 
 // Simple component to debug rendering issues
@@ -52,24 +50,16 @@ function SimpleDebugView() {
 function Router() {
   return (
     <Switch>
-      <Route path="/login" component={Login} /> {/* Added login route */}
-      <Route path="/" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
-      <Route path="/pipeline" element={<ProtectedRoute><SalesPipeline /></ProtectedRoute>} />
-      <Route path="/leaderboard" element={<ProtectedRoute><Leaderboard /></ProtectedRoute>} />
-      <Route path="/team" element={<ProtectedRoute><TeamManagement /></ProtectedRoute>} />
-      <Route path="/achievements" element={<ProtectedRoute><Achievements /></ProtectedRoute>} />
+      <Route path="/" component={Dashboard} />
+      <Route path="/pipeline" component={SalesPipeline} />
+      <Route path="/leaderboard" component={Leaderboard} />
+      <Route path="/team" component={TeamManagement} />
+      <Route path="/achievements" component={Achievements} />
       <Route path="/debug" component={SimpleDebugView} />
       <Route path="/test" component={TestPage} />
       <Route component={NotFound} />
     </Switch>
   );
-}
-
-function ProtectedRoute({ children }) {
-  if (!checkAuth()) {
-    return <Navigate to="/login" />;
-  }
-  return children;
 }
 
 function App() {
