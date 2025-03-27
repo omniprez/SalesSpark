@@ -526,8 +526,10 @@ function NewDealDialog({ open, onOpenChange, selectedUser, customers, onDealCrea
   // Create deal mutation
   const createDealMutation = useMutation({
     mutationFn: async (dealData: any) => {
-      const res = await apiRequest('POST', '/api/deals', dealData);
-      return await res.json();
+      return await apiRequest('POST', '/api/deals', {
+        method: 'POST',
+        body: dealData
+      });
     },
     onSuccess: () => {
       toast({
@@ -539,6 +541,7 @@ function NewDealDialog({ open, onOpenChange, selectedUser, customers, onDealCrea
       onDealCreated();
     },
     onError: (error: Error) => {
+      console.error('Deal creation error:', error);
       toast({
         title: "Error",
         description: error.message || "Failed to create deal",
