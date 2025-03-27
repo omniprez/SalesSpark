@@ -53,21 +53,19 @@ app.use((req, res, next) => {
   if (app.get("env") === "development") {
     await setupVite(app, server);
   } else {
-    serveStatic(app);
+    app.use(express.static(path.resolve(__dirname, "../dist/public")));
+    // Handle client-side routing
+    app.get('*', (req, res, next) => {
+      if (req.path.startsWith('/api')) {
+        next();
+        return;
+      }
+      res.sendFile(path.resolve(__dirname, '../dist/public/index.html'));
+    });
   }
 
-// Use port 5000 for main HTTP traffic (mapped to port 80 externally)
-const port = process.env.PORT || 5000;
-const host = '0.0.0.0';  // Always bind to all interfaces in Replit
-
-// Ensure client-side routing works by serving index.html for non-API routes
-app.get('*', (req, res, next) => {
-  if (req.path.startsWith('/api')) {
-    next();
-    return;
-  }
-  res.sendFile(path.resolve(__dirname, '../dist/public/index.html'));
-});
+  const port = process.env.PORT || 5000;
+  const host = '0.0.0.0';
 
 // Use the exact listen format that Replit expects to detect the port
 server.listen(port, host, () => {
