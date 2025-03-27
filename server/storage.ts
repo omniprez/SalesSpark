@@ -2,7 +2,10 @@ import {
   User, InsertUser, Team, InsertTeam, Deal, InsertDeal, 
   Customer, InsertCustomer, Product, InsertProduct, 
   Achievement, InsertAchievement, UserAchievement, InsertUserAchievement,
-  Activity, InsertActivity, Target, InsertTarget
+  Activity, InsertActivity, Target, InsertTarget,
+  Reward, InsertReward, UserReward, InsertUserReward,
+  PointTransaction, InsertPointTransaction, Challenge, InsertChallenge,
+  ChallengeParticipant, InsertChallengeParticipant
 } from "@shared/schema";
 
 export interface IStorage {
@@ -64,6 +67,39 @@ export interface IStorage {
   getLeaderboard(): Promise<any[]>;
   getSalesPipelineData(): Promise<any[]>;
   getPerformanceOverview(): Promise<any>;
+  
+  // Rewards operations
+  getReward(id: number): Promise<Reward | undefined>;
+  createReward(reward: InsertReward): Promise<Reward>;
+  getRewards(): Promise<Reward[]>;
+  getRewardsByCategory(category: string): Promise<Reward[]>;
+  getRewardsByType(type: string): Promise<Reward[]>;
+  getAvailableRewards(): Promise<Reward[]>;
+  
+  // User rewards operations
+  getUserRewards(userId: number): Promise<UserReward[]>;
+  awardUserReward(userReward: InsertUserReward): Promise<UserReward>;
+  updateUserRewardStatus(id: number, status: string): Promise<UserReward | undefined>;
+  
+  // Points operations
+  getUserPoints(userId: number): Promise<number>;
+  addPointTransaction(transaction: InsertPointTransaction): Promise<PointTransaction>;
+  getPointTransactions(userId: number): Promise<PointTransaction[]>;
+  
+  // Challenge operations
+  getChallenge(id: number): Promise<Challenge | undefined>;
+  createChallenge(challenge: InsertChallenge): Promise<Challenge>;
+  getChallenges(active?: boolean): Promise<Challenge[]>;
+  updateChallenge(id: number, challenge: Partial<Challenge>): Promise<Challenge | undefined>;
+  
+  // Challenge participant operations
+  joinChallenge(participant: InsertChallengeParticipant): Promise<ChallengeParticipant>;
+  getParticipantsByChallenge(challengeId: number): Promise<ChallengeParticipant[]>;
+  getUserChallenges(userId: number): Promise<{challenge: Challenge, participant: ChallengeParticipant}[]>;
+  updateChallengeParticipant(id: number, participant: Partial<ChallengeParticipant>): Promise<ChallengeParticipant | undefined>;
+  
+  // Gamification data methods
+  getRewardsAndIncentivesData(userId?: number): Promise<any>;
 }
 
 export class MemStorage implements IStorage {
@@ -76,6 +112,11 @@ export class MemStorage implements IStorage {
   private userAchievements: Map<number, UserAchievement>;
   private activities: Map<number, Activity>;
   private targets: Map<number, Target>;
+  private rewards: Map<number, Reward>;
+  private userRewards: Map<number, UserReward>;
+  private pointTransactions: Map<number, PointTransaction>;
+  private challenges: Map<number, Challenge>;
+  private challengeParticipants: Map<number, ChallengeParticipant>;
   
   private userCounter: number;
   private teamCounter: number;
@@ -86,6 +127,11 @@ export class MemStorage implements IStorage {
   private userAchievementCounter: number;
   private activityCounter: number;
   private targetCounter: number;
+  private rewardCounter: number;
+  private userRewardCounter: number;
+  private pointTransactionCounter: number;
+  private challengeCounter: number;
+  private challengeParticipantCounter: number;
 
   constructor() {
     this.users = new Map();
@@ -97,6 +143,11 @@ export class MemStorage implements IStorage {
     this.userAchievements = new Map();
     this.activities = new Map();
     this.targets = new Map();
+    this.rewards = new Map();
+    this.userRewards = new Map();
+    this.pointTransactions = new Map();
+    this.challenges = new Map();
+    this.challengeParticipants = new Map();
     
     this.userCounter = 1;
     this.teamCounter = 1;
@@ -107,6 +158,11 @@ export class MemStorage implements IStorage {
     this.userAchievementCounter = 1;
     this.activityCounter = 1;
     this.targetCounter = 1;
+    this.rewardCounter = 1;
+    this.userRewardCounter = 1;
+    this.pointTransactionCounter = 1;
+    this.challengeCounter = 1;
+    this.challengeParticipantCounter = 1;
     
     // Initialize with some sample data
     this.initializeData();
@@ -873,6 +929,419 @@ export class MemStorage implements IStorage {
       targetValue: 200000,
       currentValue: 156000
     });
+    
+    // Create rewards
+    const giftCardReward = await this.createReward({
+      name: "$50 Amazon Gift Card",
+      description: "Redeem your points for a $50 Amazon gift card",
+      category: "gift_card",
+      type: "digital",
+      pointCost: 5000,
+      isAvailable: true,
+      image: "gift_card.png"
+    });
+    
+    const premiumEquipment = await this.createReward({
+      name: "Premium Sales Equipment",
+      description: "Upgrade your sales toolkit with premium equipment",
+      category: "equipment",
+      type: "physical",
+      pointCost: 10000,
+      isAvailable: true,
+      image: "equipment.png"
+    });
+    
+    const trainingWorkshop = await this.createReward({
+      name: "Advanced Sales Training Workshop",
+      description: "Exclusive access to advanced sales techniques workshop",
+      category: "training",
+      type: "event",
+      pointCost: 7500,
+      isAvailable: true,
+      image: "workshop.png"
+    });
+    
+    // Create a sample challenge
+    const salesChallenge = await this.createChallenge({
+      name: "Fiber Sales Sprint",
+      description: "Close the most fiber connectivity deals this month",
+      startDate: new Date(new Date().setDate(1)), // First day of current month
+      endDate: new Date(new Date(new Date().setMonth(new Date().getMonth() + 1)).setDate(0)), // Last day of current month
+      category: "sales",
+      criteria: { 
+        type: "most_sales", 
+        category: "fiber", 
+        minSales: 3
+      },
+      status: "active",
+      rewardPoints: 1000
+    });
+    
+    // Add participant to challenge
+    await this.joinChallenge({
+      userId: alexMorgan.id,
+      challengeId: salesChallenge.id,
+      joinedAt: new Date(),
+      progress: {
+        currentSales: 2,
+        targetSales: 3
+      },
+      status: "in_progress"
+    });
+    
+    // Add points for the user
+    await this.addPointTransaction({
+      userId: alexMorgan.id,
+      amount: 750,
+      description: "Closed deals bonus",
+      transactionType: "reward",
+      referenceId: null,
+      metadata: null
+    });
+    
+    // Award user with a reward
+    await this.awardUserReward({
+      userId: alexMorgan.id,
+      rewardId: giftCardReward.id,
+      awardedAt: new Date(),
+      status: "pending",
+      metadata: { email: "alex.morgan@example.com" }
+    });
+  }
+  
+  // Rewards operations
+  async getReward(id: number): Promise<Reward | undefined> {
+    return this.rewards.get(id);
+  }
+
+  async createReward(insertReward: InsertReward): Promise<Reward> {
+    const id = this.rewardCounter++;
+    const now = new Date();
+    const reward: Reward = { ...insertReward, id, createdAt: now };
+    this.rewards.set(id, reward);
+    return reward;
+  }
+
+  async getRewards(): Promise<Reward[]> {
+    return Array.from(this.rewards.values());
+  }
+
+  async getRewardsByCategory(category: string): Promise<Reward[]> {
+    return Array.from(this.rewards.values())
+      .filter(reward => reward.category === category);
+  }
+
+  async getRewardsByType(type: string): Promise<Reward[]> {
+    return Array.from(this.rewards.values())
+      .filter(reward => reward.type === type);
+  }
+
+  async getAvailableRewards(): Promise<Reward[]> {
+    return Array.from(this.rewards.values())
+      .filter(reward => reward.isAvailable);
+  }
+
+  // User rewards operations
+  async getUserRewards(userId: number): Promise<UserReward[]> {
+    return Array.from(this.userRewards.values())
+      .filter(userReward => userReward.userId === userId)
+      .sort((a, b) => {
+        // Sort by awarded date, most recent first
+        if (!a.awardedAt || !b.awardedAt) return 0;
+        return b.awardedAt.getTime() - a.awardedAt.getTime();
+      });
+  }
+
+  async awardUserReward(insertUserReward: InsertUserReward): Promise<UserReward> {
+    const id = this.userRewardCounter++;
+    const now = new Date();
+    const userReward: UserReward = { 
+      ...insertUserReward, 
+      id, 
+      awardedAt: insertUserReward.awardedAt || now,
+      status: insertUserReward.status || 'pending'
+    };
+    this.userRewards.set(id, userReward);
+    
+    // Create an activity for this reward
+    const reward = await this.getReward(userReward.rewardId);
+    if (reward) {
+      await this.createActivity({
+        userId: userReward.userId,
+        type: 'reward_earned',
+        content: `Reward earned: ${reward.name}`,
+        relatedId: reward.id,
+        metadata: { rewardName: reward.name, rewardImage: reward.image }
+      });
+    }
+    
+    return userReward;
+  }
+
+  async updateUserRewardStatus(id: number, status: string): Promise<UserReward | undefined> {
+    const userReward = this.userRewards.get(id);
+    if (!userReward) return undefined;
+    
+    const updatedUserReward = { 
+      ...userReward, 
+      status
+    };
+    this.userRewards.set(id, updatedUserReward);
+    
+    // Create an activity for status change
+    if (status === 'redeemed') {
+      const reward = await this.getReward(userReward.rewardId);
+      if (reward) {
+        await this.createActivity({
+          userId: userReward.userId,
+          type: 'reward_redeemed',
+          content: `Reward redeemed: ${reward.name}`,
+          relatedId: reward.id,
+          metadata: { rewardName: reward.name, rewardImage: reward.image }
+        });
+      }
+    }
+    
+    return updatedUserReward;
+  }
+
+  // Points operations
+  async getUserPoints(userId: number): Promise<number> {
+    const transactions = Array.from(this.pointTransactions.values())
+      .filter(transaction => transaction.userId === userId);
+    
+    // Sum up all the transactions
+    return transactions.reduce((total, transaction) => {
+      // Add points for earned transactions, subtract for spent
+      if (transaction.transactionType === 'reward' || transaction.transactionType === 'bonus') {
+        return total + transaction.amount;
+      } else if (transaction.transactionType === 'redemption') {
+        return total - transaction.amount;
+      }
+      return total;
+    }, 0);
+  }
+
+  async addPointTransaction(transaction: InsertPointTransaction): Promise<PointTransaction> {
+    const id = this.pointTransactionCounter++;
+    const now = new Date();
+    const pointTransaction: PointTransaction = { 
+      ...transaction, 
+      id, 
+      createdAt: now 
+    };
+    this.pointTransactions.set(id, pointTransaction);
+    
+    // Create an activity for this point transaction
+    await this.createActivity({
+      userId: transaction.userId,
+      type: 'points_transaction',
+      content: transaction.transactionType === 'redemption' 
+        ? `Points spent: ${transaction.amount} - ${transaction.description}`
+        : `Points earned: ${transaction.amount} - ${transaction.description}`,
+      relatedId: null,
+      metadata: { 
+        amount: transaction.amount, 
+        type: transaction.transactionType,
+        description: transaction.description
+      }
+    });
+    
+    return pointTransaction;
+  }
+
+  async getPointTransactions(userId: number): Promise<PointTransaction[]> {
+    return Array.from(this.pointTransactions.values())
+      .filter(transaction => transaction.userId === userId)
+      .sort((a, b) => {
+        // Sort by created date, most recent first
+        if (!a.createdAt || !b.createdAt) return 0;
+        return b.createdAt.getTime() - a.createdAt.getTime();
+      });
+  }
+
+  // Challenge operations
+  async getChallenge(id: number): Promise<Challenge | undefined> {
+    return this.challenges.get(id);
+  }
+
+  async createChallenge(insertChallenge: InsertChallenge): Promise<Challenge> {
+    const id = this.challengeCounter++;
+    const now = new Date();
+    const challenge: Challenge = { 
+      ...insertChallenge, 
+      id, 
+      createdAt: now 
+    };
+    this.challenges.set(id, challenge);
+    return challenge;
+  }
+
+  async getChallenges(active?: boolean): Promise<Challenge[]> {
+    let challenges = Array.from(this.challenges.values());
+    
+    if (active !== undefined) {
+      const now = new Date();
+      challenges = challenges.filter(challenge => {
+        const isActive = challenge.status === 'active' &&
+                        challenge.startDate <= now &&
+                        challenge.endDate >= now;
+        return active ? isActive : !isActive;
+      });
+    }
+    
+    return challenges;
+  }
+
+  async updateChallenge(id: number, challengeData: Partial<Challenge>): Promise<Challenge | undefined> {
+    const challenge = this.challenges.get(id);
+    if (!challenge) return undefined;
+    
+    const updatedChallenge = { ...challenge, ...challengeData };
+    this.challenges.set(id, updatedChallenge);
+    return updatedChallenge;
+  }
+
+  // Challenge participant operations
+  async joinChallenge(participant: InsertChallengeParticipant): Promise<ChallengeParticipant> {
+    const id = this.challengeParticipantCounter++;
+    const now = new Date();
+    const challengeParticipant: ChallengeParticipant = { 
+      ...participant, 
+      id, 
+      joinedAt: participant.joinedAt || now,
+      status: participant.status || 'in_progress'
+    };
+    this.challengeParticipants.set(id, challengeParticipant);
+    
+    // Create an activity for joining the challenge
+    const challenge = await this.getChallenge(participant.challengeId);
+    if (challenge) {
+      await this.createActivity({
+        userId: participant.userId,
+        type: 'challenge_joined',
+        content: `Joined challenge: ${challenge.name}`,
+        relatedId: challenge.id,
+        metadata: { challengeName: challenge.name, challengeCategory: challenge.category }
+      });
+    }
+    
+    return challengeParticipant;
+  }
+
+  async getParticipantsByChallenge(challengeId: number): Promise<ChallengeParticipant[]> {
+    return Array.from(this.challengeParticipants.values())
+      .filter(participant => participant.challengeId === challengeId);
+  }
+
+  async getUserChallenges(userId: number): Promise<{challenge: Challenge, participant: ChallengeParticipant}[]> {
+    const userParticipants = Array.from(this.challengeParticipants.values())
+      .filter(participant => participant.userId === userId);
+    
+    const result = [];
+    for (const participant of userParticipants) {
+      const challenge = this.challenges.get(participant.challengeId);
+      if (challenge) {
+        result.push({
+          challenge,
+          participant
+        });
+      }
+    }
+    
+    return result;
+  }
+
+  async updateChallengeParticipant(id: number, participantData: Partial<ChallengeParticipant>): Promise<ChallengeParticipant | undefined> {
+    const participant = this.challengeParticipants.get(id);
+    if (!participant) return undefined;
+    
+    const updatedParticipant = { ...participant, ...participantData };
+    this.challengeParticipants.set(id, updatedParticipant);
+    
+    // If status changed to completed, create activity and award points
+    if (participantData.status === 'completed' && participant.status !== 'completed') {
+      const challenge = await this.getChallenge(participant.challengeId);
+      if (challenge) {
+        // Create activity
+        await this.createActivity({
+          userId: participant.userId,
+          type: 'challenge_completed',
+          content: `Completed challenge: ${challenge.name}`,
+          relatedId: challenge.id,
+          metadata: { challengeName: challenge.name, rewardPoints: challenge.rewardPoints }
+        });
+        
+        // Award points
+        if (challenge.rewardPoints) {
+          await this.addPointTransaction({
+            userId: participant.userId,
+            amount: challenge.rewardPoints,
+            description: `Completed challenge: ${challenge.name}`,
+            transactionType: 'reward',
+            referenceId: challenge.id,
+            metadata: { challengeName: challenge.name }
+          });
+        }
+      }
+    }
+    
+    return updatedParticipant;
+  }
+
+  // Gamification data methods
+  async getRewardsAndIncentivesData(userId?: number): Promise<any> {
+    let userPoints = 0;
+    let userRecentTransactions = [];
+    let userAvailableRewards = [];
+    let userRewards = [];
+    let userChallenges = [];
+    
+    // Get data for specific user if userId is provided
+    if (userId) {
+      userPoints = await this.getUserPoints(userId);
+      userRecentTransactions = await this.getPointTransactions(userId);
+      userRewards = await this.getUserRewards(userId);
+      userChallenges = await this.getUserChallenges(userId);
+    }
+    
+    // Always get available rewards
+    const availableRewards = await this.getAvailableRewards();
+    
+    // Get active challenges
+    const activeChallenges = await this.getChallenges(true);
+    
+    // For a specific user, filter rewards they can afford
+    if (userId) {
+      userAvailableRewards = availableRewards.filter(reward => 
+        reward.pointCost <= userPoints
+      );
+    }
+    
+    return {
+      userPoints,
+      userRecentTransactions: userRecentTransactions.slice(0, 5), // Get only 5 most recent transactions
+      availableRewards,
+      userAvailableRewards,
+      userRewards,
+      activeChallenges,
+      userChallenges,
+      
+      // Overview stats (for dashboard)
+      totalRewards: this.rewards.size,
+      totalActiveChallenges: activeChallenges.length,
+      totalRedeemed: Array.from(this.userRewards.values())
+        .filter(reward => reward.status === 'redeemed').length,
+      
+      // Rewards by category
+      rewardsByCategory: {
+        gift_card: availableRewards.filter(r => r.category === 'gift_card').length,
+        equipment: availableRewards.filter(r => r.category === 'equipment').length,
+        training: availableRewards.filter(r => r.category === 'training').length,
+        travel: availableRewards.filter(r => r.category === 'travel').length,
+        other: availableRewards.filter(r => !['gift_card', 'equipment', 'training', 'travel'].includes(r.category)).length
+      }
+    };
   }
 }
 

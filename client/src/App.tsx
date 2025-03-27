@@ -8,6 +8,7 @@ import SalesPipeline from "@/pages/SalesPipeline";
 import Leaderboard from "@/pages/Leaderboard";
 import TeamManagement from "@/pages/TeamManagement";
 import Achievements from "@/pages/Achievements";
+import RewardsAndIncentives from "@/pages/RewardsAndIncentives";
 import TestPage from "@/pages/TestPage";
 import Debug from "@/pages/Debug";
 import Layout from "@/components/Layout";
@@ -64,6 +65,7 @@ function Router() {
               <Route path="/leaderboard" component={Leaderboard} />
               <Route path="/team" component={TeamManagement} />
               <Route path="/achievements" component={Achievements} />
+              <Route path="/rewards" component={RewardsAndIncentives} />
               <Route path="/simpledebug" component={SimpleDebugView} />
               <Route path="/test" component={TestPage} />
               <Route component={NotFound} />

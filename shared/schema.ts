@@ -1,6 +1,7 @@
 import { 
   pgTable, text, serial, integer, boolean, 
-  timestamp, doublePrecision, json, varchar 
+  timestamp, doublePrecision, json, varchar,
+  date
 } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
@@ -156,6 +157,92 @@ export const insertTargetSchema = createInsertSchema(targets).omit({
   createdAt: true,
 });
 
+// Rewards Schema
+export const rewards = pgTable("rewards", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull(),
+  description: text("description").notNull(),
+  category: text("category").notNull(), // gift_card, equipment, training, travel, etc.
+  type: text("type").notNull(), // digital, physical, event, experience
+  pointCost: integer("point_cost").notNull(), // Points required to redeem this reward
+  isAvailable: boolean("is_available").default(true),
+  image: text("image"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const insertRewardSchema = createInsertSchema(rewards).omit({
+  id: true,
+  createdAt: true,
+});
+
+// User Rewards Schema
+export const userRewards = pgTable("user_rewards", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull(),
+  rewardId: integer("reward_id").notNull(),
+  status: text("status").notNull(), // pending, redeemed, expired, canceled
+  awardedAt: timestamp("awarded_at").defaultNow(),
+  redeemedAt: timestamp("redeemed_at"),
+  expiresAt: timestamp("expires_at"),
+  metadata: json("metadata"),
+});
+
+export const insertUserRewardSchema = createInsertSchema(userRewards).omit({
+  id: true,
+  awardedAt: true,
+});
+
+// Points Transaction Schema
+export const pointTransactions = pgTable("point_transactions", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull(),
+  amount: integer("amount").notNull(), // Positive for earned, negative for spent
+  description: text("description").notNull(),
+  transactionType: text("transaction_type").notNull(), // reward, bonus, redemption
+  referenceId: integer("reference_id"),
+  metadata: json("metadata"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const insertPointTransactionSchema = createInsertSchema(pointTransactions).omit({
+  id: true,
+  createdAt: true,
+});
+
+// Challenges Schema (Time-bound competitive events)
+export const challenges = pgTable("challenges", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull(),
+  description: text("description").notNull(),
+  category: text("category").notNull(), // sales, team, etc.
+  startDate: timestamp("start_date").notNull(),
+  endDate: timestamp("end_date").notNull(),
+  criteria: json("criteria").notNull(),
+  status: text("status").notNull(), // active, completed, canceled
+  rewardPoints: integer("reward_points"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const insertChallengeSchema = createInsertSchema(challenges).omit({
+  id: true,
+  createdAt: true,
+});
+
+// Challenge Participants Schema
+export const challengeParticipants = pgTable("challenge_participants", {
+  id: serial("id").primaryKey(),
+  challengeId: integer("challenge_id").notNull(),
+  userId: integer("user_id").notNull(),
+  joinedAt: timestamp("joined_at").defaultNow(),
+  status: text("status").notNull(), // in_progress, completed, failed
+  progress: json("progress"),
+});
+
+export const insertChallengeParticipantSchema = createInsertSchema(challengeParticipants).omit({
+  id: true,
+  joinedAt: true,
+});
+
 // Export types
 export type User = typeof users.$inferSelect;
 export type InsertUser = z.infer<typeof insertUserSchema>;
@@ -183,3 +270,18 @@ export type InsertActivity = z.infer<typeof insertActivitySchema>;
 
 export type Target = typeof targets.$inferSelect;
 export type InsertTarget = z.infer<typeof insertTargetSchema>;
+
+export type Reward = typeof rewards.$inferSelect;
+export type InsertReward = z.infer<typeof insertRewardSchema>;
+
+export type UserReward = typeof userRewards.$inferSelect;
+export type InsertUserReward = z.infer<typeof insertUserRewardSchema>;
+
+export type PointTransaction = typeof pointTransactions.$inferSelect;
+export type InsertPointTransaction = z.infer<typeof insertPointTransactionSchema>;
+
+export type Challenge = typeof challenges.$inferSelect;
+export type InsertChallenge = z.infer<typeof insertChallengeSchema>;
+
+export type ChallengeParticipant = typeof challengeParticipants.$inferSelect;
+export type InsertChallengeParticipant = z.infer<typeof insertChallengeParticipantSchema>;

@@ -507,6 +507,213 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
+  // Rewards and Incentives API routes
+  app.get("/api/rewards-and-incentives", authMiddleware, async (req, res) => {
+    try {
+      const userId = req.user?.id;
+      const data = await storage.getRewardsAndIncentivesData(userId);
+      res.json(data);
+    } catch (error) {
+      console.error("Error fetching rewards data:", error);
+      res.status(500).json({ error: "Failed to fetch rewards data" });
+    }
+  });
+  
+  app.get("/api/rewards", async (req, res) => {
+    try {
+      const rewards = await storage.getRewards();
+      res.json(rewards);
+    } catch (error) {
+      console.error("Error fetching rewards:", error);
+      res.status(500).json({ error: "Failed to fetch rewards" });
+    }
+  });
+  
+  app.get("/api/rewards/available", async (req, res) => {
+    try {
+      const rewards = await storage.getAvailableRewards();
+      res.json(rewards);
+    } catch (error) {
+      console.error("Error fetching available rewards:", error);
+      res.status(500).json({ error: "Failed to fetch available rewards" });
+    }
+  });
+  
+  app.get("/api/challenges", async (req, res) => {
+    try {
+      const activeOnly = req.query.active === 'true';
+      const challenges = await storage.getChallenges(activeOnly);
+      res.json(challenges);
+    } catch (error) {
+      console.error("Error fetching challenges:", error);
+      res.status(500).json({ error: "Failed to fetch challenges" });
+    }
+  });
+  
+  app.get("/api/user/rewards", authMiddleware, async (req, res) => {
+    try {
+      if (!req.user) {
+        return res.status(401).json({ error: "Unauthorized" });
+      }
+      const userRewards = await storage.getUserRewards(req.user.id);
+      res.json(userRewards);
+    } catch (error) {
+      console.error("Error fetching user rewards:", error);
+      res.status(500).json({ error: "Failed to fetch user rewards" });
+    }
+  });
+  
+  app.get("/api/user/challenges", authMiddleware, async (req, res) => {
+    try {
+      if (!req.user) {
+        return res.status(401).json({ error: "Unauthorized" });
+      }
+      const userChallenges = await storage.getUserChallenges(req.user.id);
+      res.json(userChallenges);
+    } catch (error) {
+      console.error("Error fetching user challenges:", error);
+      res.status(500).json({ error: "Failed to fetch user challenges" });
+    }
+  });
+  
+  app.get("/api/user/points", authMiddleware, async (req, res) => {
+    try {
+      if (!req.user) {
+        return res.status(401).json({ error: "Unauthorized" });
+      }
+      const points = await storage.getUserPoints(req.user.id);
+      res.json({ points });
+    } catch (error) {
+      console.error("Error fetching user points:", error);
+      res.status(500).json({ error: "Failed to fetch user points" });
+    }
+  });
+  
+  app.get("/api/user/transactions", authMiddleware, async (req, res) => {
+    try {
+      if (!req.user) {
+        return res.status(401).json({ error: "Unauthorized" });
+      }
+      const transactions = await storage.getPointTransactions(req.user.id);
+      res.json(transactions);
+    } catch (error) {
+      console.error("Error fetching point transactions:", error);
+      res.status(500).json({ error: "Failed to fetch point transactions" });
+    }
+  });
+  
+  // Reward redemption endpoint
+  app.post("/api/rewards/redeem/:rewardId", authMiddleware, async (req, res) => {
+    try {
+      if (!req.user) {
+        return res.status(401).json({ error: "Unauthorized" });
+      }
+      
+      const rewardId = parseInt(req.params.rewardId);
+      if (isNaN(rewardId)) {
+        return res.status(400).json({ error: "Invalid reward ID" });
+      }
+      
+      // Get the reward
+      const reward = await storage.getReward(rewardId);
+      if (!reward) {
+        return res.status(404).json({ error: "Reward not found" });
+      }
+      
+      // Check if reward is available
+      if (!reward.isAvailable) {
+        return res.status(400).json({ error: "This reward is not available for redemption" });
+      }
+      
+      // Check if user has enough points
+      const userPoints = await storage.getUserPoints(req.user.id);
+      if (userPoints < reward.pointCost) {
+        return res.status(400).json({ 
+          error: "Insufficient points", 
+          points: userPoints, 
+          required: reward.pointCost 
+        });
+      }
+      
+      // Create the user reward
+      const userReward = await storage.awardUserReward({
+        userId: req.user.id,
+        rewardId: reward.id,
+        awardedAt: new Date(),
+        status: "pending",
+        metadata: req.body.metadata || null
+      });
+      
+      // Deduct points
+      await storage.addPointTransaction({
+        userId: req.user.id,
+        amount: reward.pointCost,
+        description: `Redeemed reward: ${reward.name}`,
+        transactionType: "redemption",
+        referenceId: userReward.id,
+        metadata: { rewardName: reward.name }
+      });
+      
+      res.json({ 
+        success: true, 
+        userReward,
+        pointsRemaining: userPoints - reward.pointCost 
+      });
+    } catch (error) {
+      console.error("Error redeeming reward:", error);
+      res.status(500).json({ error: "Failed to redeem reward" });
+    }
+  });
+  
+  // Join challenge endpoint
+  app.post("/api/challenges/join/:challengeId", authMiddleware, async (req, res) => {
+    try {
+      if (!req.user) {
+        return res.status(401).json({ error: "Unauthorized" });
+      }
+      
+      const challengeId = parseInt(req.params.challengeId);
+      if (isNaN(challengeId)) {
+        return res.status(400).json({ error: "Invalid challenge ID" });
+      }
+      
+      // Get the challenge
+      const challenge = await storage.getChallenge(challengeId);
+      if (!challenge) {
+        return res.status(404).json({ error: "Challenge not found" });
+      }
+      
+      // Check if challenge is active
+      const now = new Date();
+      if (challenge.status !== 'active' || challenge.startDate > now || challenge.endDate < now) {
+        return res.status(400).json({ error: "This challenge is not currently active" });
+      }
+      
+      // Check if user is already participating
+      const userChallenges = await storage.getUserChallenges(req.user.id);
+      if (userChallenges.some(uc => uc.challenge.id === challengeId)) {
+        return res.status(400).json({ error: "You are already participating in this challenge" });
+      }
+      
+      // Join the challenge
+      const participant = await storage.joinChallenge({
+        userId: req.user.id,
+        challengeId: challenge.id,
+        joinedAt: new Date(),
+        progress: req.body.progress || { currentSales: 0 },
+        status: "in_progress"
+      });
+      
+      res.json({ 
+        success: true, 
+        participant 
+      });
+    } catch (error) {
+      console.error("Error joining challenge:", error);
+      res.status(500).json({ error: "Failed to join challenge" });
+    }
+  });
+  
   // Add test endpoint
   app.get("/api/test", (req, res) => {
     res.json({ status: "ok", message: "Server is responding" });
