@@ -512,6 +512,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
     res.json({ status: "ok", message: "Server is responding" });
   });
 
+  // Add a route for a simple test HTML page to diagnose issues
+  app.get("/simple-test", (req, res) => {
+    res.sendFile(process.cwd() + "/client/index-test.html");
+  });
+
   // Create HTTP server
   const httpServer = createServer(app);
   
