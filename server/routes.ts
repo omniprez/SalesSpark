@@ -39,6 +39,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Login route
+  app.post("/api/auth/login", async (req, res) => {
+    const { username, password } = req.body;
+    
+    try {
+      const user = await storage.getUserByUsername(username);
+      
+      if (!user || user.password !== password) {
+        return res.status(401).json({ message: 'Invalid username or password' });
+      }
+
+      // Set session
+      req.user = { id: user.id, username: user.username };
+      res.json({ success: true, user: { id: user.id, username: user.username } });
+    } catch (error) {
+      console.error("Login error:", error);
+      res.status(500).json({ message: 'Server error' });
+    }
+  });
+
   // Auth check route
   app.get("/api/auth/check", authMiddleware, (req, res) => {
     res.json({ authenticated: true, user: req.user });
