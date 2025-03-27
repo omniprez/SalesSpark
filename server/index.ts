@@ -65,3 +65,4 @@ server.listen(port, host, () => {
   log(`Server running at http://${host}:${port}`);
   log(`The application should be visible in the Replit webview tab`);
 });
+})();
