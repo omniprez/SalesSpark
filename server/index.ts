@@ -58,14 +58,14 @@ app.use((req, res, next) => {
   if (app.get("env") === "development") {
     await setupVite(app, server);
   } else {
-    app.use(express.static(path.resolve(__dirname, "../dist/public")));
+    app.use(express.static(path.resolve(__dirname, "../../dist/public")));
     // Handle client-side routing
     app.get('*', (req, res, next) => {
       if (req.path.startsWith('/api')) {
         next();
         return;
       }
-      res.sendFile(path.resolve(__dirname, '../dist/public/index.html'));
+      res.sendFile(path.resolve(__dirname, '../../dist/public/index.html'));
     });
   }
 
