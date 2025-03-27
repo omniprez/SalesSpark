@@ -73,8 +73,22 @@ app.use((req, res, next) => {
   const host = '0.0.0.0';
 
 // Use the exact listen format that Replit expects to detect the port
+// Add error handling
+server.on('error', (error) => {
+  log(`Server error: ${error.message}`);
+});
+
+// Keep connection alive
+server.keepAliveTimeout = 65000;
+server.headersTimeout = 66000;
+
 server.listen(port, host, () => {
   log(`Server running at http://${host}:${port}`);
   log(`The application should be visible in the Replit webview tab`);
+});
+
+// Handle uncaught exceptions
+process.on('uncaughtException', (error) => {
+  log(`Uncaught Exception: ${error.message}`);
 });
 })();
