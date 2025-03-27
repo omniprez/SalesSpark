@@ -6,6 +6,8 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Loader2 } from "lucide-react";
+import { login } from '../lib/auth';
+import { useToast } from '@/hooks/use-toast';
 
 export default function Login() {
   const [, setLocation] = useLocation();
@@ -15,6 +17,7 @@ export default function Login() {
     username: '',
     password: ''
   });
+  const { toast } = useToast();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -22,24 +25,21 @@ export default function Login() {
     setError('');
 
     try {
-      const response = await fetch('/api/auth/login', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        credentials: 'include',
-        body: JSON.stringify(formData),
-      });
+      const result = await login(formData.username, formData.password);
 
-      if (response.ok) {
-        const data = await response.json();
-        if (data.success) {
-          setLocation('/');
-          return;
-        }
+      if (result.success && result.user) {
+        toast({
+          title: "Login Successful",
+          description: `Welcome back, ${result.user.name}!`,
+          duration: 3000,
+        });
+        setLocation('/');
+        return;
+      } else {
+        setError(result.message || 'Invalid username or password');
       }
-      setError('Invalid username or password');
     } catch (err) {
+      console.error('Login error:', err);
       setError('An error occurred. Please try again.');
     } finally {
       setLoading(false);

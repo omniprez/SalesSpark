@@ -1,28 +1,90 @@
-import type { Express } from "express";
+import type { Express, Request, Response, NextFunction } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { insertDealSchema, insertUserSchema, insertCustomerSchema, insertActivitySchema } from "@shared/schema";
 import { ZodError } from "zod";
 import { fromZodError } from "zod-validation-error";
+import { SessionData } from 'express-session';
+
+// Extend express Request type to include user property
+declare module 'express-session' {
+  interface SessionData {
+    user?: {
+      id: number;
+      username: string;
+      name: string;
+      role: string;
+    };
+  }
+}
+
+// Extend express Request type to include user property
+declare module 'express' {
+  interface Request {
+    user?: {
+      id: number;
+      username: string;
+      name?: string;
+      role?: string;
+    };
+  }
+}
 
 export async function registerRoutes(app: Express): Promise<Server> {
-  // Auth middleware
-  const authMiddleware = (req: any, res: any, next: any) => {
+  // Auth middleware - supports both session and Replit auth
+  const authMiddleware = (req: Request, res: Response, next: NextFunction) => {
+    // First check for session-based auth
+    if (req.session && req.session.user) {
+      req.user = req.session.user;
+      return next();
+    }
+    
+    // Fallback to cookie-based auth
+    if (req.cookies && req.cookies.user_id) {
+      const userId = req.cookies.user_id;
+      storage.getUser(parseInt(userId))
+        .then(user => {
+          if (user) {
+            req.user = { 
+              id: user.id, 
+              username: user.username,
+              name: user.name,
+              role: user.role
+            };
+            return next();
+          }
+          return res.status(401).json({ error: 'Invalid authentication' });
+        })
+        .catch(err => {
+          console.error("Auth middleware error:", err);
+          return res.status(500).json({ error: 'Server error' });
+        });
+      return;
+    }
+    
+    // Fallback to Replit auth headers for development
     const userId = req.headers['x-replit-user-id'];
     const username = req.headers['x-replit-user-name'];
     
-    if (!userId || !username) {
-      return res.status(401).json({ error: 'Not authenticated' });
+    if (userId && username) {
+      req.user = { 
+        id: parseInt(userId as string), 
+        username: username as string 
+      };
+      return next();
     }
     
-    req.user = { id: userId, username };
-    next();
+    return res.status(401).json({ error: 'Not authenticated' });
   };
 
   // Get current user
-  app.get("/api/me", authMiddleware, async (req, res) => {
-    const { user } = req;
-    const dbUser = await storage.getUser(parseInt(user.id));
+  app.get("/api/me", authMiddleware, async (req: Request, res: Response) => {
+    if (!req.user) {
+      return res.status(401).json({ error: 'Not authenticated' });
+    }
+    
+    const user = req.user;
+    const dbUser = await storage.getUser(parseInt(user.id.toString()));
     
     if (!dbUser) {
       // Create new user if first time
@@ -40,7 +102,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Login route
-  app.post("/api/auth/login", async (req, res) => {
+  app.post("/api/auth/login", async (req: Request, res: Response) => {
     const { username, password } = req.body;
     
     try {
@@ -53,7 +115,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(401).json({ message: 'Invalid username or password' });
       }
 
-      // Set session cookie
+      // Store user info in session
+      const userInfo = { 
+        id: user.id, 
+        username: user.username,
+        name: user.name,
+        role: user.role
+      };
+      
+      // Set in both session and cookie for compatibility
+      if (req.session) {
+        req.session.user = userInfo;
+      }
+      
+      // Also set cookie as fallback
       res.cookie('user_id', user.id, { 
         httpOnly: true,
         secure: process.env.NODE_ENV === 'production',
@@ -63,12 +138,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.log("Login successful for user:", username);
       res.json({ 
         success: true, 
-        user: { 
-          id: user.id, 
-          username: user.username,
-          name: user.name,
-          role: user.role
-        } 
+        user: userInfo
       });
     } catch (error) {
       console.error("Login error:", error);
@@ -77,8 +147,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Auth check route
-  app.get("/api/auth/check", authMiddleware, (req, res) => {
+  app.get("/api/auth/check", authMiddleware, (req: Request, res: Response) => {
+    if (!req.user) {
+      return res.status(401).json({ authenticated: false });
+    }
     res.json({ authenticated: true, user: req.user });
+  });
+  
+  // Logout route
+  app.post("/api/auth/logout", (req: Request, res: Response) => {
+    // Clear session
+    if (req.session) {
+      req.session.destroy((err) => {
+        if (err) {
+          console.error("Error destroying session:", err);
+        }
+      });
+    }
+    
+    // Clear cookie
+    res.clearCookie('user_id');
+    
+    res.json({ success: true });
   });
   
   // Dashboard routes

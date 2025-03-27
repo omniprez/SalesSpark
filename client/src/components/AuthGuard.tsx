@@ -2,25 +2,45 @@
 import { useEffect, useState } from 'react';
 import { useLocation } from 'wouter';
 import { Loader2 } from 'lucide-react';
+import { checkAuth } from '../lib/auth';
+import { useToast } from '@/hooks/use-toast';
 
 export default function AuthGuard({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true);
   const [, setLocation] = useLocation();
+  const { toast } = useToast();
 
   useEffect(() => {
-    fetch('/api/auth/check')
-      .then(res => res.json())
-      .then(data => {
-        if (!data.authenticated) {
+    async function verifyAuth() {
+      try {
+        const user = await checkAuth();
+        
+        if (!user) {
+          toast({
+            title: "Authentication Required",
+            description: "Please log in to access this page",
+            variant: "destructive",
+            duration: 3000,
+          });
           setLocation('/login');
         }
+        
         setLoading(false);
-      })
-      .catch(() => {
+      } catch (error) {
+        console.error('Auth verification error:', error);
+        toast({
+          title: "Authentication Error",
+          description: "Please log in to continue",
+          variant: "destructive",
+          duration: 3000,
+        });
         setLocation('/login');
         setLoading(false);
-      });
-  }, [setLocation]);
+      }
+    }
+    
+    verifyAuth();
+  }, [setLocation, toast]);
 
   if (loading) {
     return (
