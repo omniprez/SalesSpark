@@ -116,8 +116,7 @@ export default function WeeklyPipeline() {
     queryKey: ['/api/targets', selectedUser],
     queryFn: async () => {
       if (!selectedUser) return [];
-      const res = await apiRequest('GET', `/api/targets?userId=${selectedUser}`);
-      return await res.json();
+      return await apiRequest('GET', `/api/targets?userId=${selectedUser}`);
     },
     enabled: !!selectedUser
   });
@@ -526,10 +525,8 @@ function NewDealDialog({ open, onOpenChange, selectedUser, customers, onDealCrea
   // Create deal mutation
   const createDealMutation = useMutation({
     mutationFn: async (dealData: any) => {
-      return await apiRequest('POST', '/api/deals', {
-        method: 'POST',
-        body: dealData
-      });
+      console.log("Submitting deal data:", dealData);
+      return await apiRequest('POST', '/api/deals', dealData);
     },
     onSuccess: () => {
       toast({

@@ -25,16 +25,25 @@ async function throwIfResNotOk(res: Response) {
 }
 
 export async function apiRequest<T = any>(
+  method: string,
   url: string,
-  options?: RequestInit,
+  data?: any,
 ): Promise<T> {
-  console.log(`Making API request to: ${url}`);
-  const res = await fetch(url, {
-    ...options,
-    headers: options?.body ? { "Content-Type": "application/json", ...options.headers } : {...options?.headers},
-    body: options?.body ? JSON.stringify(options.body) : undefined,
+  console.log(`Making API request to: ${url} with method: ${method}`);
+  const options: RequestInit = {
+    method,
+    headers: {
+      "Content-Type": "application/json",
+    },
     credentials: "include",
-  });
+  };
+  
+  if (data) {
+    options.body = JSON.stringify(data);
+  }
+  
+  console.log(`Request options:`, { method, url, dataProvided: !!data });
+  const res = await fetch(url, options);
 
   console.log(`Response status for ${url}:`, res.status);
   await throwIfResNotOk(res);
