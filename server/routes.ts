@@ -120,6 +120,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.log("Login attempt for user:", username);
       console.log("User found in database:", user ? "Yes" : "No");
       
+      if (user) {
+        console.log("Found user details:", { 
+          id: user.id, 
+          username: user.username,
+          storedPassword: user.password,
+          providedPassword: password,
+          passwordMatch: user.password === password
+        });
+      }
+      
       if (!user || user.password !== password) {
         console.log("Invalid credentials for user:", username);
         return res.status(401).json({ 

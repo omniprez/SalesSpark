@@ -119,10 +119,21 @@ export class MemStorage implements IStorage {
 
   async getUserByUsername(username: string): Promise<User | undefined> {
     const allUsers = Array.from(this.users.values());
-    console.log("All users in database:", allUsers);
-    const foundUser = allUsers.find((user) => user.username === username);
-    console.log("Found user:", foundUser);
-    return foundUser;
+    console.log(`Searching for user with username: "${username}"`);
+    console.log("Available users:", allUsers.map(u => ({ id: u.id, username: u.username })));
+    
+    // Case-insensitive search
+    const foundUser = allUsers.find(
+      user => user.username.toLowerCase() === username.toLowerCase()
+    );
+    
+    if (foundUser) {
+      console.log(`Found user:`, foundUser);
+      return foundUser;
+    } else {
+      console.log(`No user found with username: "${username}"`);
+      return undefined;
+    }
   }
 
   async createUser(insertUser: InsertUser): Promise<User> {
@@ -628,6 +639,17 @@ export class MemStorage implements IStorage {
     });
     
     // Create sample users
+    const adminUser = await this.createUser({
+      username: 'admin',
+      password: 'password',
+      name: 'Admin User',
+      email: 'admin@example.com',
+      role: 'Administrator',
+      teamId: internalTeam.id,
+      isChannelPartner: false,
+      avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?ixlib=rb-1.2.1&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80'
+    });
+    
     const alexMorgan = await this.createUser({
       username: 'alex.morgan',
       password: 'password',

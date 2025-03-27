@@ -35,7 +35,7 @@ export default function Login() {
           
           // Add small delay to show the "already logged in" message
           setTimeout(() => {
-            window.location.href = '/dashboard';
+            window.location.href = '/';
           }, 1500);
         }
       } catch (error) {
@@ -70,8 +70,8 @@ export default function Login() {
         localStorage.setItem('isLoggedIn', 'true');
         localStorage.setItem('userId', result.user.id.toString());
         
-        // Redirect to dashboard
-        window.location.href = '/dashboard';
+        // Redirect to dashboard - fixed URL
+        window.location.href = '/';
         return;
       } else {
         console.error("Login failed:", result.message);
