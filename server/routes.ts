@@ -4,8 +4,6 @@ import { storage } from "./storage";
 import { insertDealSchema, insertUserSchema, insertCustomerSchema, insertActivitySchema } from "@shared/schema";
 import { ZodError } from "zod";
 import { fromZodError } from "zod-validation-error";
-import { SessionData } from 'express-session';
-
 // Extend express Request type to include user property
 declare module 'express-session' {
   interface SessionData {

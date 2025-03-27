@@ -36,8 +36,8 @@ export default function AuthGuard({ children }: { children: React.ReactNode }) {
           });
           localStorage.removeItem('isLoggedIn');
           localStorage.removeItem('userId');
-          // Use window.location for a hard redirect to ensure session is refreshed
-          window.location.href = '/login';
+          // Use setLocation for routing instead of window.location
+          setLocation('/login');
         }
         
         setLoading(false);
@@ -51,8 +51,8 @@ export default function AuthGuard({ children }: { children: React.ReactNode }) {
         });
         localStorage.removeItem('isLoggedIn');
         localStorage.removeItem('userId');
-        // Use window.location for a hard redirect to ensure session is refreshed
-        window.location.href = '/login';
+        // Use setLocation for routing instead of window.location
+        setLocation('/login');
         setLoading(false);
       }
     }
