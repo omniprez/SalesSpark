@@ -2,7 +2,10 @@ import {
   User, InsertUser, Team, InsertTeam, Deal, InsertDeal, 
   Customer, InsertCustomer, Product, InsertProduct, 
   Achievement, InsertAchievement, UserAchievement, InsertUserAchievement,
-  Activity, InsertActivity, Target, InsertTarget
+  Activity, InsertActivity, Target, InsertTarget,
+  Reward, InsertReward, UserReward, InsertUserReward,
+  PointTransaction, InsertPointTransaction, Challenge, InsertChallenge,
+  ChallengeParticipant, InsertChallengeParticipant
 } from "@shared/schema";
 
 export interface IStorage {
@@ -64,6 +67,39 @@ export interface IStorage {
   getLeaderboard(): Promise<any[]>;
   getSalesPipelineData(): Promise<any[]>;
   getPerformanceOverview(): Promise<any>;
+  
+  // Rewards operations
+  getReward(id: number): Promise<Reward | undefined>;
+  createReward(reward: InsertReward): Promise<Reward>;
+  getRewards(): Promise<Reward[]>;
+  getRewardsByCategory(category: string): Promise<Reward[]>;
+  getRewardsByType(type: string): Promise<Reward[]>;
+  getAvailableRewards(): Promise<Reward[]>;
+  
+  // User rewards operations
+  getUserRewards(userId: number): Promise<UserReward[]>;
+  awardUserReward(userReward: InsertUserReward): Promise<UserReward>;
+  updateUserRewardStatus(id: number, status: string): Promise<UserReward | undefined>;
+  
+  // Points operations
+  getUserPoints(userId: number): Promise<number>;
+  addPointTransaction(transaction: InsertPointTransaction): Promise<PointTransaction>;
+  getPointTransactions(userId: number): Promise<PointTransaction[]>;
+  
+  // Challenge operations
+  getChallenge(id: number): Promise<Challenge | undefined>;
+  createChallenge(challenge: InsertChallenge): Promise<Challenge>;
+  getChallenges(active?: boolean): Promise<Challenge[]>;
+  updateChallenge(id: number, challenge: Partial<Challenge>): Promise<Challenge | undefined>;
+  
+  // Challenge participant operations
+  joinChallenge(participant: InsertChallengeParticipant): Promise<ChallengeParticipant>;
+  getParticipantsByChallenge(challengeId: number): Promise<ChallengeParticipant[]>;
+  getUserChallenges(userId: number): Promise<{challenge: Challenge, participant: ChallengeParticipant}[]>;
+  updateChallengeParticipant(id: number, participant: Partial<ChallengeParticipant>): Promise<ChallengeParticipant | undefined>;
+  
+  // Gamification data methods
+  getRewardsAndIncentivesData(userId?: number): Promise<any>;
 }
 
 export class MemStorage implements IStorage {
@@ -76,6 +112,11 @@ export class MemStorage implements IStorage {
   private userAchievements: Map<number, UserAchievement>;
   private activities: Map<number, Activity>;
   private targets: Map<number, Target>;
+  private rewards: Map<number, Reward>;
+  private userRewards: Map<number, UserReward>;
+  private pointTransactions: Map<number, PointTransaction>;
+  private challenges: Map<number, Challenge>;
+  private challengeParticipants: Map<number, ChallengeParticipant>;
   
   private userCounter: number;
   private teamCounter: number;
@@ -86,6 +127,11 @@ export class MemStorage implements IStorage {
   private userAchievementCounter: number;
   private activityCounter: number;
   private targetCounter: number;
+  private rewardCounter: number;
+  private userRewardCounter: number;
+  private pointTransactionCounter: number;
+  private challengeCounter: number;
+  private challengeParticipantCounter: number;
 
   constructor() {
     this.users = new Map();
@@ -97,6 +143,11 @@ export class MemStorage implements IStorage {
     this.userAchievements = new Map();
     this.activities = new Map();
     this.targets = new Map();
+    this.rewards = new Map();
+    this.userRewards = new Map();
+    this.pointTransactions = new Map();
+    this.challenges = new Map();
+    this.challengeParticipants = new Map();
     
     this.userCounter = 1;
     this.teamCounter = 1;
@@ -107,6 +158,11 @@ export class MemStorage implements IStorage {
     this.userAchievementCounter = 1;
     this.activityCounter = 1;
     this.targetCounter = 1;
+    this.rewardCounter = 1;
+    this.userRewardCounter = 1;
+    this.pointTransactionCounter = 1;
+    this.challengeCounter = 1;
+    this.challengeParticipantCounter = 1;
     
     // Initialize with some sample data
     this.initializeData();
@@ -118,9 +174,22 @@ export class MemStorage implements IStorage {
   }
 
   async getUserByUsername(username: string): Promise<User | undefined> {
-    return Array.from(this.users.values()).find(
-      (user) => user.username === username,
+    const allUsers = Array.from(this.users.values());
+    console.log(`Searching for user with username: "${username}"`);
+    console.log("Available users:", allUsers.map(u => ({ id: u.id, username: u.username })));
+    
+    // Case-insensitive search
+    const foundUser = allUsers.find(
+      user => user.username.toLowerCase() === username.toLowerCase()
     );
+    
+    if (foundUser) {
+      console.log(`Found user:`, foundUser);
+      return foundUser;
+    } else {
+      console.log(`No user found with username: "${username}"`);
+      return undefined;
+    }
   }
 
   async createUser(insertUser: InsertUser): Promise<User> {
@@ -612,82 +681,120 @@ export class MemStorage implements IStorage {
 
   // Initialize with sample data for development
   private async initializeData() {
-    // Create teams
-    const internalTeam = await this.createTeam({
-      name: 'Internal Sales Team',
+    // Create teams with real business divisions
+    const enterpriseTeam = await this.createTeam({
+      name: 'Enterprise Solutions',
       region: 'National',
       type: 'internal'
     });
     
-    const channelTeam = await this.createTeam({
-      name: 'Channel Partners',
+    const carrierTeam = await this.createTeam({
+      name: 'Carrier Services',
+      region: 'National',
+      type: 'internal'
+    });
+    
+    const regionalTeam = await this.createTeam({
+      name: 'Regional Business',
+      region: 'Central',
+      type: 'internal'
+    });
+    
+    const channelPartnersTeam = await this.createTeam({
+      name: 'Channel Partner Network',
       region: 'National',
       type: 'channel_partner'
     });
     
-    // Create sample users
-    const alexMorgan = await this.createUser({
-      username: 'alex.morgan',
+    // Create system admin user
+    const adminUser = await this.createUser({
+      username: 'admin',
       password: 'password',
-      name: 'Alex Morgan',
-      email: 'alex.morgan@example.com',
-      role: 'Sales Manager',
-      teamId: internalTeam.id,
+      name: 'System Administrator',
+      email: 'admin@ispcompany.com',
+      role: 'Administrator',
+      teamId: null,
+      isChannelPartner: false,
+      avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?ixlib=rb-1.2.1&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80'
+    });
+    
+    // Create real sales team members
+    const robertGarcia = await this.createUser({
+      username: 'robert.garcia',
+      password: 'password',
+      name: 'Robert Garcia',
+      email: 'robert.garcia@ispcompany.com',
+      role: 'Enterprise Sales Director',
+      teamId: enterpriseTeam.id,
       isChannelPartner: false,
       avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?ixlib=rb-1.2.1&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80'
     });
     
-    const jessicaTaylor = await this.createUser({
-      username: 'jessica.taylor',
+    const lisaWilliams = await this.createUser({
+      username: 'lisa.williams',
       password: 'password',
-      name: 'Jessica Taylor',
-      email: 'jessica.taylor@example.com',
-      role: 'Sales Representative',
-      teamId: internalTeam.id,
+      name: 'Lisa Williams',
+      email: 'lisa.williams@ispcompany.com',
+      role: 'Enterprise Account Executive',
+      teamId: enterpriseTeam.id,
       isChannelPartner: false,
       avatar: 'https://images.unsplash.com/photo-1517841905240-472988babdf9?ixlib=rb-1.2.1&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80'
     });
     
-    const michaelChen = await this.createUser({
-      username: 'michael.chen',
+    const davidThompson = await this.createUser({
+      username: 'david.thompson',
       password: 'password',
-      name: 'Michael Chen',
-      email: 'michael.chen@example.com',
-      role: 'Channel Manager',
-      teamId: channelTeam.id,
-      isChannelPartner: true,
+      name: 'David Thompson',
+      email: 'david.thompson@ispcompany.com',
+      role: 'Carrier Services Manager',
+      teamId: carrierTeam.id,
+      isChannelPartner: false,
       avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?ixlib=rb-1.2.1&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80'
     });
     
-    const sarahJohnson = await this.createUser({
-      username: 'sarah.johnson',
+    const michellePatel = await this.createUser({
+      username: 'michelle.patel',
       password: 'password',
-      name: 'Sarah Johnson',
-      email: 'sarah.johnson@example.com',
-      role: 'Sales Representative',
-      teamId: internalTeam.id,
+      name: 'Michelle Patel',
+      email: 'michelle.patel@ispcompany.com',
+      role: 'Regional Sales Manager',
+      teamId: regionalTeam.id,
       isChannelPartner: false,
       avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?ixlib=rb-1.2.1&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80'
     });
     
-    const davidWilson = await this.createUser({
-      username: 'david.wilson',
+    const jamesMurphy = await this.createUser({
+      username: 'james.murphy',
       password: 'password',
-      name: 'David Wilson',
-      email: 'david.wilson@example.com',
-      role: 'Sales Representative',
-      teamId: internalTeam.id,
+      name: 'James Murphy',
+      email: 'james.murphy@partnernetwork.com',
+      role: 'Channel Partner Lead',
+      teamId: channelPartnersTeam.id,
+      isChannelPartner: true,
+      avatar: 'https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?ixlib=rb-1.2.1&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80'
+    });
+    
+    // Create more team members
+    // Regional team member
+    const danielWong = await this.createUser({
+      username: 'daniel.wong',
+      password: 'password',
+      name: 'Daniel Wong',
+      email: 'daniel.wong@ispcompany.com',
+      role: 'Regional Account Executive',
+      teamId: regionalTeam.id,
       isChannelPartner: false,
       avatar: 'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?ixlib=rb-1.2.1&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80'
     });
     
-    const emilyRodriguez = await this.createUser({
-      username: 'emily.rodriguez',
+    // Channel partner team member
+    const emilySanchez = await this.createUser({
+      username: 'emily.sanchez',
       password: 'password',
-      name: 'Emily Rodriguez',
-      email: 'emily.rodriguez@example.com',
-      role: 'Channel Partner',
-      teamId: channelTeam.id,
+      name: 'Emily Sanchez',
+      email: 'emily.sanchez@partnernetwork.com',
+      role: 'Channel Partner Representative',
+      teamId: channelPartnersTeam.id,
       isChannelPartner: true,
       avatar: 'https://images.unsplash.com/photo-1573497019940-1c28c88b4f3e?ixlib=rb-1.2.1&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80'
     });
@@ -742,14 +849,15 @@ export class MemStorage implements IStorage {
       description: 'High-speed fiber optic connectivity for businesses'
     });
     
-    // Create sample deals
-    const deal1 = await this.createDeal({
-      name: 'ACME Corporation - Wireless Network Expansion',
-      value: 125000,
+    // Create realistic deals for each team member
+    // Enterprise deals
+    const enterpriseDeal1 = await this.createDeal({
+      name: 'ACME Corporation - Enterprise Wireless Network Expansion',
+      value: 375000,
       category: 'wireless',
       stage: 'proposal',
       customerId: acmeCorp.id,
-      userId: sarahJohnson.id,
+      userId: robertGarcia.id,
       gpPercentage: 65,
       expectedCloseDate: new Date(Date.now() + 1000 * 60 * 60 * 24 * 30), // 30 days from now
       region: 'Northeast',
@@ -757,31 +865,118 @@ export class MemStorage implements IStorage {
       dealType: 'expansion'
     });
     
-    const deal2 = await this.createDeal({
-      name: 'TechSolutions Inc - Fiber Network Installation',
-      value: 98750,
+    const enterpriseDeal2 = await this.createDeal({
+      name: 'TechSolutions Inc - Campus-wide Fiber Installation',
+      value: 245000,
       category: 'fiber',
       stage: 'negotiation',
       customerId: techSolutions.id,
-      userId: michaelChen.id,
-      gpPercentage: 70,
+      userId: lisaWilliams.id,
+      gpPercentage: 68,
       expectedCloseDate: new Date(Date.now() + 1000 * 60 * 60 * 24 * 15), // 15 days from now
       region: 'West',
+      clientType: 'B2B',
+      dealType: 'new'
+    });
+    
+    const enterpriseDeal3 = await this.createDeal({
+      name: 'Microtech Systems - Secure Cloud Connection Service',
+      value: 178500,
+      category: 'fiber',
+      stage: 'qualification',
+      customerId: globalLogistics.id,
+      userId: lisaWilliams.id,
+      gpPercentage: 72,
+      expectedCloseDate: new Date(Date.now() + 1000 * 60 * 60 * 24 * 45), // 45 days from now
+      region: 'Northeast',
+      clientType: 'B2B',
+      dealType: 'new'
+    });
+    
+    // Carrier deals
+    const carrierDeal1 = await this.createDeal({
+      name: 'Northeast Telecom - Dark Fiber Network Expansion',
+      value: 1250000,
+      category: 'fiber',
+      stage: 'closing',
+      customerId: acmeCorp.id,
+      userId: davidThompson.id,
+      gpPercentage: 58,
+      expectedCloseDate: new Date(Date.now() + 1000 * 60 * 60 * 24 * 7), // 7 days from now
+      region: 'Northeast',
+      clientType: 'carrier',
+      dealType: 'expansion'
+    });
+    
+    const carrierDeal2 = await this.createDeal({
+      name: 'Pacific Mobile Carriers - Metro Area Network Upgrade',
+      value: 875000,
+      category: 'wireless',
+      stage: 'negotiation',
+      customerId: techSolutions.id,
+      userId: davidThompson.id,
+      gpPercentage: 61,
+      expectedCloseDate: new Date(Date.now() + 1000 * 60 * 60 * 24 * 28), // 28 days from now
+      region: 'West',
+      clientType: 'carrier',
+      dealType: 'upgrade'
+    });
+    
+    // Regional business deals
+    const regionalDeal1 = await this.createDeal({
+      name: 'Central Medical Center - Wireless Network Refresh',
+      value: 145000,
+      category: 'wireless',
+      stage: 'proposal',
+      customerId: globalLogistics.id,
+      userId: michellePatel.id,
+      gpPercentage: 63,
+      expectedCloseDate: new Date(Date.now() + 1000 * 60 * 60 * 24 * 22), // 22 days from now
+      region: 'Central',
+      clientType: 'regional',
+      dealType: 'refresh'
+    });
+    
+    const regionalDeal2 = await this.createDeal({
+      name: 'Midwest Manufacturing Group - Fiber Connectivity Deployment',
+      value: 215000,
+      category: 'fiber',
+      stage: 'qualification',
+      customerId: acmeCorp.id,
+      userId: michellePatel.id,
+      gpPercentage: 67,
+      expectedCloseDate: new Date(Date.now() + 1000 * 60 * 60 * 24 * 35), // 35 days from now
+      region: 'Central',
       clientType: 'regional',
       dealType: 'new'
     });
     
-    const deal3 = await this.createDeal({
-      name: 'Global Logistics - Wireless Backup System',
-      value: 143200,
-      category: 'wireless',
-      stage: 'qualification',
-      customerId: globalLogistics.id,
-      userId: davidWilson.id,
-      gpPercentage: 62,
-      expectedCloseDate: new Date(Date.now() + 1000 * 60 * 60 * 24 * 45), // 45 days from now
+    // Channel partner deals
+    const channelDeal1 = await this.createDeal({
+      name: 'Southern Financial Network - Branch Office Connectivity',
+      value: 325000,
+      category: 'fiber',
+      stage: 'discovery',
+      customerId: techSolutions.id,
+      userId: jamesMurphy.id,
+      gpPercentage: 59,
+      expectedCloseDate: new Date(Date.now() + 1000 * 60 * 60 * 24 * 50), // 50 days from now
       region: 'Southeast',
-      clientType: 'carrier',
+      clientType: 'B2B',
+      dealType: 'new'
+    });
+    
+    const channelDeal2 = await this.createDeal({
+      name: 'Western Healthcare Association - Private 5G Network',
+      value: 495000,
+      category: 'wireless',
+      stage: 'proposal',
+      customerId: globalLogistics.id,
+      userId: jamesMurphy.id,
+      gpPercentage: 64,
+      expectedCloseDate: new Date(Date.now() + 1000 * 60 * 60 * 24 * 40), // 40 days from now
+      region: 'West',
+      clientType: 'B2B',
       dealType: 'new'
     });
     
@@ -825,30 +1020,650 @@ export class MemStorage implements IStorage {
     
     // Award achievements to users
     await this.awardAchievement({
-      userId: jessicaTaylor.id,
+      userId: lisaWilliams.id,
       achievementId: salesStar.id
     });
     
     await this.awardAchievement({
-      userId: michaelChen.id,
+      userId: davidThompson.id,
       achievementId: dealCloser.id
     });
     
     await this.awardAchievement({
-      userId: alexMorgan.id,
+      userId: robertGarcia.id,
       achievementId: fiberExpert.id
     });
     
-    // Create user targets
+    // Create real weekly sales targets with reviews
+    // Enterprise team lead - quarterly and weekly targets
     await this.createTarget({
-      userId: alexMorgan.id,
+      userId: robertGarcia.id,
       targetType: 'revenue',
-      period: 'monthly',
+      period: 'quarterly',
+      startDate: new Date(new Date().getFullYear(), Math.floor(new Date().getMonth() / 3) * 3, 1), // First day of current quarter
+      endDate: new Date(new Date().getFullYear(), Math.floor(new Date().getMonth() / 3) * 3 + 3, 0), // Last day of current quarter
+      targetValue: 1500000, // $1.5M quarterly target
+      currentValue: 675000  // $675K so far (45% to goal)
+    });
+    
+    await this.createTarget({
+      userId: robertGarcia.id,
+      targetType: 'revenue',
+      period: 'weekly',
+      startDate: new Date(new Date().setDate(new Date().getDate() - new Date().getDay())), // First day of current week (Sunday)
+      endDate: new Date(new Date().setDate(new Date().getDate() - new Date().getDay() + 6)), // Last day of current week (Saturday)
+      targetValue: 115000, // $115K weekly target
+      currentValue: 65000  // $65K so far (56% to goal)
+    });
+    
+    // Enterprise Account Executive - quarterly and weekly targets
+    await this.createTarget({
+      userId: lisaWilliams.id,
+      targetType: 'revenue',
+      period: 'quarterly',
+      startDate: new Date(new Date().getFullYear(), Math.floor(new Date().getMonth() / 3) * 3, 1), // First day of current quarter
+      endDate: new Date(new Date().getFullYear(), Math.floor(new Date().getMonth() / 3) * 3 + 3, 0), // Last day of current quarter
+      targetValue: 750000, // $750K quarterly target
+      currentValue: 410000  // $410K so far (55% to goal)
+    });
+    
+    await this.createTarget({
+      userId: lisaWilliams.id,
+      targetType: 'revenue',
+      period: 'weekly',
+      startDate: new Date(new Date().setDate(new Date().getDate() - new Date().getDay())), // First day of current week (Sunday)
+      endDate: new Date(new Date().setDate(new Date().getDate() - new Date().getDay() + 6)), // Last day of current week (Saturday)
+      targetValue: 57700, // $57.7K weekly target
+      currentValue: 23000  // $23K so far (40% to goal)
+    });
+    
+    // Carrier Services Manager - quarterly and weekly targets
+    await this.createTarget({
+      userId: davidThompson.id,
+      targetType: 'revenue',
+      period: 'quarterly',
+      startDate: new Date(new Date().getFullYear(), Math.floor(new Date().getMonth() / 3) * 3, 1), // First day of current quarter
+      endDate: new Date(new Date().getFullYear(), Math.floor(new Date().getMonth() / 3) * 3 + 3, 0), // Last day of current quarter
+      targetValue: 2200000, // $2.2M quarterly target (carrier deals are larger)
+      currentValue: 1450000  // $1.45M so far (66% to goal)
+    });
+    
+    await this.createTarget({
+      userId: davidThompson.id,
+      targetType: 'revenue',
+      period: 'weekly',
+      startDate: new Date(new Date().setDate(new Date().getDate() - new Date().getDay())), // First day of current week (Sunday)
+      endDate: new Date(new Date().setDate(new Date().getDate() - new Date().getDay() + 6)), // Last day of current week (Saturday)
+      targetValue: 169000, // $169K weekly target
+      currentValue: 135000  // $135K so far (80% to goal)
+    });
+    
+    // Regional Sales Manager - quarterly and weekly targets
+    await this.createTarget({
+      userId: michellePatel.id,
+      targetType: 'revenue',
+      period: 'quarterly',
+      startDate: new Date(new Date().getFullYear(), Math.floor(new Date().getMonth() / 3) * 3, 1), // First day of current quarter
+      endDate: new Date(new Date().getFullYear(), Math.floor(new Date().getMonth() / 3) * 3 + 3, 0), // Last day of current quarter
+      targetValue: 850000, // $850K quarterly target
+      currentValue: 325000  // $325K so far (38% to goal)
+    });
+    
+    await this.createTarget({
+      userId: michellePatel.id,
+      targetType: 'revenue',
+      period: 'weekly',
+      startDate: new Date(new Date().setDate(new Date().getDate() - new Date().getDay())), // First day of current week (Sunday)
+      endDate: new Date(new Date().setDate(new Date().getDate() - new Date().getDay() + 6)), // Last day of current week (Saturday)
+      targetValue: 65000, // $65K weekly target
+      currentValue: 42000  // $42K so far (65% to goal)
+    });
+    
+    // Channel Partner Lead - quarterly and weekly targets
+    await this.createTarget({
+      userId: jamesMurphy.id,
+      targetType: 'revenue',
+      period: 'quarterly',
+      startDate: new Date(new Date().getFullYear(), Math.floor(new Date().getMonth() / 3) * 3, 1), // First day of current quarter
+      endDate: new Date(new Date().getFullYear(), Math.floor(new Date().getMonth() / 3) * 3 + 3, 0), // Last day of current quarter
+      targetValue: 1200000, // $1.2M quarterly target
+      currentValue: 580000  // $580K so far (48% to goal)
+    });
+    
+    await this.createTarget({
+      userId: jamesMurphy.id,
+      targetType: 'revenue',
+      period: 'weekly',
+      startDate: new Date(new Date().setDate(new Date().getDate() - new Date().getDay())), // First day of current week (Sunday)
+      endDate: new Date(new Date().setDate(new Date().getDate() - new Date().getDay() + 6)), // Last day of current week (Saturday)
+      targetValue: 92000, // $92K weekly target
+      currentValue: 33000  // $33K so far (36% to goal)
+    });
+    
+    // Create rewards
+    const giftCardReward = await this.createReward({
+      name: "$50 Amazon Gift Card",
+      description: "Redeem your points for a $50 Amazon gift card",
+      category: "gift_card",
+      type: "digital",
+      pointCost: 5000,
+      isAvailable: true,
+      image: "gift_card.png"
+    });
+    
+    const premiumEquipment = await this.createReward({
+      name: "Premium Sales Equipment",
+      description: "Upgrade your sales toolkit with premium equipment",
+      category: "equipment",
+      type: "physical",
+      pointCost: 10000,
+      isAvailable: true,
+      image: "equipment.png"
+    });
+    
+    const trainingWorkshop = await this.createReward({
+      name: "Advanced Sales Training Workshop",
+      description: "Exclusive access to advanced sales techniques workshop",
+      category: "training",
+      type: "event",
+      pointCost: 7500,
+      isAvailable: true,
+      image: "workshop.png"
+    });
+    
+    // Create challenges focused on ISP sales
+    const fiberSalesChallenge = await this.createChallenge({
+      name: "Fiber Sales Sprint",
+      description: "Close at least 3 fiber connectivity deals this month to earn 1,000 points",
       startDate: new Date(new Date().setDate(1)), // First day of current month
       endDate: new Date(new Date(new Date().setMonth(new Date().getMonth() + 1)).setDate(0)), // Last day of current month
-      targetValue: 200000,
-      currentValue: 156000
+      category: "sales",
+      criteria: { 
+        type: "most_sales", 
+        category: "fiber", 
+        minSales: 3
+      },
+      status: "active",
+      rewardPoints: 1000
     });
+    
+    const carrierDealChallenge = await this.createChallenge({
+      name: "Carrier Deal Champion",
+      description: "Close a carrier deal valued over $1M to earn 2,000 points",
+      startDate: new Date(new Date().setDate(1)), // First day of current month
+      endDate: new Date(new Date(new Date().setMonth(new Date().getMonth() + 2)).setDate(0)), // Last day of next month (2-month challenge)
+      category: "sales",
+      criteria: { 
+        type: "deal_value", 
+        clientType: "carrier", 
+        minValue: 1000000
+      },
+      status: "active",
+      rewardPoints: 2000
+    });
+    
+    // Add participants to Fiber Sales challenge
+    await this.joinChallenge({
+      userId: robertGarcia.id,
+      challengeId: fiberSalesChallenge.id,
+      joinedAt: new Date(),
+      progress: {
+        currentSales: 2,
+        targetSales: 3
+      },
+      status: "in_progress"
+    });
+    
+    await this.joinChallenge({
+      userId: lisaWilliams.id,
+      challengeId: fiberSalesChallenge.id,
+      joinedAt: new Date(),
+      progress: {
+        currentSales: 1,
+        targetSales: 3
+      },
+      status: "in_progress"
+    });
+    
+    await this.joinChallenge({
+      userId: davidThompson.id,
+      challengeId: fiberSalesChallenge.id,
+      joinedAt: new Date(),
+      progress: {
+        currentSales: 3,
+        targetSales: 3
+      },
+      status: "completed"
+    });
+    
+    // Add participants to Carrier Deal challenge
+    await this.joinChallenge({
+      userId: davidThompson.id,
+      challengeId: carrierDealChallenge.id,
+      joinedAt: new Date(),
+      progress: {
+        currentValue: 875000,
+        targetValue: 1000000
+      },
+      status: "in_progress"
+    });
+    
+    await this.joinChallenge({
+      userId: jamesMurphy.id, 
+      challengeId: carrierDealChallenge.id,
+      joinedAt: new Date(),
+      progress: {
+        currentValue: 0,
+        targetValue: 1000000
+      },
+      status: "in_progress"
+    });
+    
+    // Add points for users based on real sales performance
+    await this.addPointTransaction({
+      userId: robertGarcia.id,
+      amount: 950,
+      description: "Enterprise customer acquisition bonus",
+      transactionType: "reward",
+      referenceId: null,
+      metadata: null
+    });
+    
+    await this.addPointTransaction({
+      userId: lisaWilliams.id,
+      amount: 600,
+      description: "Quarterly sales incentive",
+      transactionType: "reward",
+      referenceId: null,
+      metadata: null
+    });
+    
+    await this.addPointTransaction({
+      userId: davidThompson.id,
+      amount: 1250,
+      description: "Carrier contract extension bonus",
+      transactionType: "reward",
+      referenceId: null,
+      metadata: null
+    });
+    
+    await this.addPointTransaction({
+      userId: michellePatel.id,
+      amount: 500,
+      description: "Regional expansion incentive",
+      transactionType: "reward",
+      referenceId: null,
+      metadata: null
+    });
+    
+    // Award users with rewards
+    await this.awardUserReward({
+      userId: robertGarcia.id,
+      rewardId: giftCardReward.id,
+      awardedAt: new Date(),
+      status: "pending",
+      metadata: { email: "robert.garcia@ispcompany.com" }
+    });
+    
+    await this.awardUserReward({
+      userId: davidThompson.id,
+      rewardId: trainingWorkshop.id,
+      awardedAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 14), // 14 days ago
+      status: "redeemed",
+      redeemedAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 7), // 7 days ago
+      metadata: { email: "david.thompson@ispcompany.com" }
+    });
+  }
+  
+  // Rewards operations
+  async getReward(id: number): Promise<Reward | undefined> {
+    return this.rewards.get(id);
+  }
+
+  async createReward(insertReward: InsertReward): Promise<Reward> {
+    const id = this.rewardCounter++;
+    const now = new Date();
+    const reward: Reward = { ...insertReward, id, createdAt: now };
+    this.rewards.set(id, reward);
+    return reward;
+  }
+
+  async getRewards(): Promise<Reward[]> {
+    return Array.from(this.rewards.values());
+  }
+
+  async getRewardsByCategory(category: string): Promise<Reward[]> {
+    return Array.from(this.rewards.values())
+      .filter(reward => reward.category === category);
+  }
+
+  async getRewardsByType(type: string): Promise<Reward[]> {
+    return Array.from(this.rewards.values())
+      .filter(reward => reward.type === type);
+  }
+
+  async getAvailableRewards(): Promise<Reward[]> {
+    return Array.from(this.rewards.values())
+      .filter(reward => reward.isAvailable);
+  }
+
+  // User rewards operations
+  async getUserRewards(userId: number): Promise<UserReward[]> {
+    return Array.from(this.userRewards.values())
+      .filter(userReward => userReward.userId === userId)
+      .sort((a, b) => {
+        // Sort by awarded date, most recent first
+        if (!a.awardedAt || !b.awardedAt) return 0;
+        return b.awardedAt.getTime() - a.awardedAt.getTime();
+      });
+  }
+
+  async awardUserReward(insertUserReward: InsertUserReward): Promise<UserReward> {
+    const id = this.userRewardCounter++;
+    const now = new Date();
+    const userReward: UserReward = { 
+      ...insertUserReward, 
+      id, 
+      awardedAt: insertUserReward.awardedAt || now,
+      status: insertUserReward.status || 'pending'
+    };
+    this.userRewards.set(id, userReward);
+    
+    // Create an activity for this reward
+    const reward = await this.getReward(userReward.rewardId);
+    if (reward) {
+      await this.createActivity({
+        userId: userReward.userId,
+        type: 'reward_earned',
+        content: `Reward earned: ${reward.name}`,
+        relatedId: reward.id,
+        metadata: { rewardName: reward.name, rewardImage: reward.image }
+      });
+    }
+    
+    return userReward;
+  }
+
+  async updateUserRewardStatus(id: number, status: string): Promise<UserReward | undefined> {
+    const userReward = this.userRewards.get(id);
+    if (!userReward) return undefined;
+    
+    const updatedUserReward = { 
+      ...userReward, 
+      status
+    };
+    this.userRewards.set(id, updatedUserReward);
+    
+    // Create an activity for status change
+    if (status === 'redeemed') {
+      const reward = await this.getReward(userReward.rewardId);
+      if (reward) {
+        await this.createActivity({
+          userId: userReward.userId,
+          type: 'reward_redeemed',
+          content: `Reward redeemed: ${reward.name}`,
+          relatedId: reward.id,
+          metadata: { rewardName: reward.name, rewardImage: reward.image }
+        });
+      }
+    }
+    
+    return updatedUserReward;
+  }
+
+  // Points operations
+  async getUserPoints(userId: number): Promise<number> {
+    const transactions = Array.from(this.pointTransactions.values())
+      .filter(transaction => transaction.userId === userId);
+    
+    // Sum up all the transactions
+    return transactions.reduce((total, transaction) => {
+      // Add points for earned transactions, subtract for spent
+      if (transaction.transactionType === 'reward' || transaction.transactionType === 'bonus') {
+        return total + transaction.amount;
+      } else if (transaction.transactionType === 'redemption') {
+        return total - transaction.amount;
+      }
+      return total;
+    }, 0);
+  }
+
+  async addPointTransaction(transaction: InsertPointTransaction): Promise<PointTransaction> {
+    const id = this.pointTransactionCounter++;
+    const now = new Date();
+    const pointTransaction: PointTransaction = { 
+      ...transaction, 
+      id, 
+      createdAt: now 
+    };
+    this.pointTransactions.set(id, pointTransaction);
+    
+    // Create an activity for this point transaction
+    await this.createActivity({
+      userId: transaction.userId,
+      type: 'points_transaction',
+      content: transaction.transactionType === 'redemption' 
+        ? `Points spent: ${transaction.amount} - ${transaction.description}`
+        : `Points earned: ${transaction.amount} - ${transaction.description}`,
+      relatedId: null,
+      metadata: { 
+        amount: transaction.amount, 
+        type: transaction.transactionType,
+        description: transaction.description
+      }
+    });
+    
+    return pointTransaction;
+  }
+
+  async getPointTransactions(userId: number): Promise<PointTransaction[]> {
+    return Array.from(this.pointTransactions.values())
+      .filter(transaction => transaction.userId === userId)
+      .sort((a, b) => {
+        // Sort by created date, most recent first
+        if (!a.createdAt || !b.createdAt) return 0;
+        return b.createdAt.getTime() - a.createdAt.getTime();
+      });
+  }
+
+  // Challenge operations
+  async getChallenge(id: number): Promise<Challenge | undefined> {
+    return this.challenges.get(id);
+  }
+
+  async createChallenge(insertChallenge: InsertChallenge): Promise<Challenge> {
+    const id = this.challengeCounter++;
+    const now = new Date();
+    const challenge: Challenge = { 
+      ...insertChallenge, 
+      id, 
+      createdAt: now 
+    };
+    this.challenges.set(id, challenge);
+    return challenge;
+  }
+
+  async getChallenges(active?: boolean): Promise<Challenge[]> {
+    let challenges = Array.from(this.challenges.values());
+    console.log(`getChallenges called: Found ${challenges.length} challenges in storage`);
+    console.log(`Challenge details: ${JSON.stringify(challenges.map(c => ({ id: c.id, name: c.name, status: c.status })))}`);
+    
+    if (active !== undefined) {
+      const now = new Date();
+      console.log(`Filtering for active=${active}, current date: ${now.toISOString()}`);
+      
+      challenges = challenges.filter(challenge => {
+        // For challenge dates, ensure they are Date objects
+        const startDate = challenge.startDate instanceof Date ? 
+          challenge.startDate : new Date(challenge.startDate);
+        const endDate = challenge.endDate instanceof Date ? 
+          challenge.endDate : new Date(challenge.endDate);
+        
+        console.log(`Challenge ${challenge.id}: status=${challenge.status}, startDate=${startDate.toISOString()}, endDate=${endDate.toISOString()}`);
+        
+        const isActive = challenge.status === 'active' &&
+                        startDate <= now &&
+                        endDate >= now;
+        
+        console.log(`Challenge ${challenge.id} isActive: ${isActive}`);
+        
+        return active === isActive; // simplified logic - if active is true, return active challenges, otherwise return inactive ones
+      });
+    }
+    
+    console.log(`getChallenges returning ${challenges.length} challenges after filtering`);
+    return challenges;
+  }
+
+  async updateChallenge(id: number, challengeData: Partial<Challenge>): Promise<Challenge | undefined> {
+    const challenge = this.challenges.get(id);
+    if (!challenge) return undefined;
+    
+    const updatedChallenge = { ...challenge, ...challengeData };
+    this.challenges.set(id, updatedChallenge);
+    return updatedChallenge;
+  }
+
+  // Challenge participant operations
+  async joinChallenge(participant: InsertChallengeParticipant): Promise<ChallengeParticipant> {
+    const id = this.challengeParticipantCounter++;
+    const now = new Date();
+    const challengeParticipant: ChallengeParticipant = { 
+      ...participant, 
+      id, 
+      joinedAt: participant.joinedAt || now,
+      status: participant.status || 'in_progress'
+    };
+    this.challengeParticipants.set(id, challengeParticipant);
+    
+    // Create an activity for joining the challenge
+    const challenge = await this.getChallenge(participant.challengeId);
+    if (challenge) {
+      await this.createActivity({
+        userId: participant.userId,
+        type: 'challenge_joined',
+        content: `Joined challenge: ${challenge.name}`,
+        relatedId: challenge.id,
+        metadata: { challengeName: challenge.name, challengeCategory: challenge.category }
+      });
+    }
+    
+    return challengeParticipant;
+  }
+
+  async getParticipantsByChallenge(challengeId: number): Promise<ChallengeParticipant[]> {
+    return Array.from(this.challengeParticipants.values())
+      .filter(participant => participant.challengeId === challengeId);
+  }
+
+  async getUserChallenges(userId: number): Promise<{challenge: Challenge, participant: ChallengeParticipant}[]> {
+    const userParticipants = Array.from(this.challengeParticipants.values())
+      .filter(participant => participant.userId === userId);
+    
+    const result = [];
+    for (const participant of userParticipants) {
+      const challenge = this.challenges.get(participant.challengeId);
+      if (challenge) {
+        result.push({
+          challenge,
+          participant
+        });
+      }
+    }
+    
+    return result;
+  }
+
+  async updateChallengeParticipant(id: number, participantData: Partial<ChallengeParticipant>): Promise<ChallengeParticipant | undefined> {
+    const participant = this.challengeParticipants.get(id);
+    if (!participant) return undefined;
+    
+    const updatedParticipant = { ...participant, ...participantData };
+    this.challengeParticipants.set(id, updatedParticipant);
+    
+    // If status changed to completed, create activity and award points
+    if (participantData.status === 'completed' && participant.status !== 'completed') {
+      const challenge = await this.getChallenge(participant.challengeId);
+      if (challenge) {
+        // Create activity
+        await this.createActivity({
+          userId: participant.userId,
+          type: 'challenge_completed',
+          content: `Completed challenge: ${challenge.name}`,
+          relatedId: challenge.id,
+          metadata: { challengeName: challenge.name, rewardPoints: challenge.rewardPoints }
+        });
+        
+        // Award points
+        if (challenge.rewardPoints) {
+          await this.addPointTransaction({
+            userId: participant.userId,
+            amount: challenge.rewardPoints,
+            description: `Completed challenge: ${challenge.name}`,
+            transactionType: 'reward',
+            referenceId: challenge.id,
+            metadata: { challengeName: challenge.name }
+          });
+        }
+      }
+    }
+    
+    return updatedParticipant;
+  }
+
+  // Gamification data methods
+  async getRewardsAndIncentivesData(userId?: number): Promise<any> {
+    let userPoints = 0;
+    let userRecentTransactions = [];
+    let userAvailableRewards = [];
+    let userRewards = [];
+    let userChallenges = [];
+    
+    // Get data for specific user if userId is provided
+    if (userId) {
+      userPoints = await this.getUserPoints(userId);
+      userRecentTransactions = await this.getPointTransactions(userId);
+      userRewards = await this.getUserRewards(userId);
+      userChallenges = await this.getUserChallenges(userId);
+    }
+    
+    // Always get available rewards
+    const availableRewards = await this.getAvailableRewards();
+    
+    // Get active challenges
+    const activeChallenges = await this.getChallenges(true);
+    
+    // For a specific user, filter rewards they can afford
+    if (userId) {
+      userAvailableRewards = availableRewards.filter(reward => 
+        reward.pointCost <= userPoints
+      );
+    }
+    
+    return {
+      userPoints,
+      userRecentTransactions: userRecentTransactions.slice(0, 5), // Get only 5 most recent transactions
+      availableRewards,
+      userAvailableRewards,
+      userRewards,
+      activeChallenges,
+      userChallenges,
+      
+      // Overview stats (for dashboard)
+      totalRewards: this.rewards.size,
+      totalActiveChallenges: activeChallenges.length,
+      totalRedeemed: Array.from(this.userRewards.values())
+        .filter(reward => reward.status === 'redeemed').length,
+      
+      // Rewards by category
+      rewardsByCategory: {
+        gift_card: availableRewards.filter(r => r.category === 'gift_card').length,
+        equipment: availableRewards.filter(r => r.category === 'equipment').length,
+        training: availableRewards.filter(r => r.category === 'training').length,
+        travel: availableRewards.filter(r => r.category === 'travel').length,
+        other: availableRewards.filter(r => !['gift_card', 'equipment', 'training', 'travel'].includes(r.category)).length
+      }
+    };
   }
 }
 

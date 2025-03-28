@@ -8,8 +8,17 @@ import SalesPipeline from "@/pages/SalesPipeline";
 import Leaderboard from "@/pages/Leaderboard";
 import TeamManagement from "@/pages/TeamManagement";
 import Achievements from "@/pages/Achievements";
+import RewardsAndIncentives from "@/pages/RewardsAndIncentives";
+import WeeklyPipeline from "@/pages/WeeklyPipeline";
+import TeamPipeline from "@/pages/TeamPipeline";
+import AdminDashboard from "@/pages/AdminDashboard";
 import TestPage from "@/pages/TestPage";
+import Debug from "@/pages/Debug";
 import Layout from "@/components/Layout";
+import Login from './pages/Login';
+import AuthGuard from './components/AuthGuard';
+import UserProfile from './pages/UserProfile';
+import CSVImport from './pages/CSVImport';
 
 
 // Simple component to debug rendering issues
@@ -50,34 +59,84 @@ function SimpleDebugView() {
 function Router() {
   return (
     <Switch>
-      <Route path="/" component={Dashboard} />
-      <Route path="/pipeline" component={SalesPipeline} />
-      <Route path="/leaderboard" component={Leaderboard} />
-      <Route path="/team" component={TeamManagement} />
-      <Route path="/achievements" component={Achievements} />
-      <Route path="/debug" component={SimpleDebugView} />
-      <Route path="/test" component={TestPage} />
-      <Route component={NotFound} />
+      <Route path="/login">
+        <Login />
+      </Route>
+      <Route path="/debug">
+        <Debug />
+      </Route>
+      <Route>
+        <AuthGuard>
+          <Layout>
+            <Switch>
+              <Route path="/">
+                <Dashboard />
+              </Route>
+              <Route path="/pipeline">
+                <SalesPipeline />
+              </Route>
+              <Route path="/weekly-pipeline">
+                <WeeklyPipeline />
+              </Route>
+              <Route path="/team-pipeline">
+                <TeamPipeline />
+              </Route>
+              <Route path="/admin">
+                <AdminDashboard />
+              </Route>
+              <Route path="/leaderboard">
+                <Leaderboard />
+              </Route>
+              <Route path="/team">
+                <TeamManagement />
+              </Route>
+              <Route path="/achievements">
+                <Achievements />
+              </Route>
+              <Route path="/rewards">
+                <RewardsAndIncentives />
+              </Route>
+              <Route path="/profile">
+                <UserProfile />
+              </Route>
+              <Route path="/import">
+                <CSVImport />
+              </Route>
+              <Route path="/simpledebug">
+                <SimpleDebugView />
+              </Route>
+              <Route path="/test">
+                <TestPage />
+              </Route>
+              <Route>
+                <NotFound />
+              </Route>
+            </Switch>
+          </Layout>
+        </AuthGuard>
+      </Route>
     </Switch>
   );
 }
 
 function App() {
   console.log("App component rendering");
+  
+  // Check if we have a stored login state
+  const isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
+  console.log("Initial login state:", isLoggedIn);
 
-  // Alternative rendering approach for better stability
   return (
     <QueryClientProvider client={queryClient}>
       <div className="app-container">
-        <div className="fallback-header">
+        {/* Only show this header during initial load, hide it once content is rendered */}
+        <div className="fallback-header" style={{ display: 'none' }}>
           <h1>ISP Sales Management Platform</h1>
           <p>Loading application...</p>
         </div>
 
         {/* Main application content */}
-        <Layout>
-          <Router />
-        </Layout>
+        <Router />
         <Toaster />
       </div>
     </QueryClientProvider>
