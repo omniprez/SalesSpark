@@ -17,6 +17,8 @@ import Debug from "@/pages/Debug";
 import Layout from "@/components/Layout";
 import Login from './pages/Login';
 import AuthGuard from './components/AuthGuard';
+import UserProfile from './pages/UserProfile';
+import CSVImport from './pages/CSVImport';
 
 
 // Simple component to debug rendering issues
@@ -72,6 +74,8 @@ function Router() {
               <Route path="/team" component={TeamManagement} />
               <Route path="/achievements" component={Achievements} />
               <Route path="/rewards" component={RewardsAndIncentives} />
+              <Route path="/profile" component={UserProfile} />
+              <Route path="/import" component={CSVImport} />
               <Route path="/simpledebug" component={SimpleDebugView} />
               <Route path="/test" component={TestPage} />
               <Route component={NotFound} />

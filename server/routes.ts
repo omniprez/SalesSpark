@@ -11,6 +11,7 @@ import {
 } from "@shared/schema";
 import { ZodError } from "zod";
 import { fromZodError } from "zod-validation-error";
+import { z } from "zod";
 // Extend express Request type to include user property
 declare module 'express-session' {
   interface SessionData {
@@ -1080,6 +1081,119 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Add a route for a simple test HTML page to diagnose issues
   app.get("/simple-test", (req, res) => {
     res.sendFile(process.cwd() + "/client/index-test.html");
+  });
+
+  // CSV upload route for deals
+  app.post("/api/deals/import-csv", authMiddleware, async (req: Request, res: Response) => {
+    try {
+      if (!req.body || !req.body.csvData) {
+        return res.status(400).json({ error: "CSV data is required" });
+      }
+
+      const { csvData } = req.body;
+      
+      // Parse and validate CSV data
+      const csvDealSchema = z.object({
+        name: z.string().min(1, "Deal name is required"),
+        value: z.string().transform(val => parseFloat(val)),
+        category: z.string().min(1, "Category is required"),
+        stage: z.string().min(1, "Stage is required"),
+        customerId: z.string().transform(val => parseInt(val)),
+        userId: z.string().transform(val => parseInt(val)),
+        gpPercentage: z.string().optional().transform(val => val ? parseFloat(val) : undefined),
+        expectedCloseDate: z.string().optional(),
+        region: z.string().optional(),
+        clientType: z.string().optional(),
+        dealType: z.string().optional()
+      });
+
+      // Parse and process CSV data
+      const parsedDeals = csvData.map((row: any) => {
+        return csvDealSchema.parse({
+          name: row.name || row.Name || row["Deal Name"] || "",
+          value: row.value || row.Value || row.Amount || "0",
+          category: row.category || row.Category || "wireless",
+          stage: row.stage || row.Stage || "prospecting",
+          customerId: row.customerId || row.CustomerID || row["Customer ID"] || "1",
+          userId: row.userId || row.UserID || row["Sales Rep ID"] || "1",
+          gpPercentage: row.gpPercentage || row["GP %"] || row["Margin %"] || "",
+          expectedCloseDate: row.expectedCloseDate || row["Expected Close Date"] || "",
+          region: row.region || row.Region || "",
+          clientType: row.clientType || row["Client Type"] || "",
+          dealType: row.dealType || row["Deal Type"] || ""
+        });
+      });
+
+      // Process and save deals
+      const createdDeals = [];
+      for (const dealData of parsedDeals) {
+        const deal = await storage.createDeal({
+          name: dealData.name,
+          value: dealData.value,
+          category: dealData.category,
+          stage: dealData.stage,
+          customerId: dealData.customerId,
+          userId: dealData.userId,
+          gpPercentage: dealData.gpPercentage,
+          expectedCloseDate: dealData.expectedCloseDate ? new Date(dealData.expectedCloseDate) : undefined,
+          region: dealData.region,
+          clientType: dealData.clientType,
+          dealType: dealData.dealType
+        });
+        createdDeals.push(deal);
+      }
+
+      res.status(201).json({ 
+        success: true, 
+        message: `Successfully imported ${createdDeals.length} deals`, 
+        deals: createdDeals 
+      });
+    } catch (error) {
+      console.error("Error importing CSV deals:", error);
+      if (error instanceof ZodError) {
+        return res.status(400).json({ 
+          error: "Invalid CSV data format", 
+          details: fromZodError(error).message 
+        });
+      }
+      res.status(500).json({ error: "Failed to import deals from CSV" });
+    }
+  });
+
+  // User profile update route
+  app.patch("/api/users/:id/profile", authMiddleware, async (req: Request, res: Response) => {
+    try {
+      const userId = parseInt(req.params.id);
+      
+      // Make sure the user can only update their own profile unless they are an admin
+      if (req.user?.id !== userId && req.user?.role !== 'admin') {
+        return res.status(403).json({ error: "You can only update your own profile" });
+      }
+      
+      const updateUserSchema = z.object({
+        name: z.string().optional(),
+        email: z.string().email().optional(),
+        avatar: z.string().optional(),
+        teamId: z.number().optional(),
+        role: z.string().optional(),
+        isChannelPartner: z.boolean().optional()
+      });
+      
+      const userData = updateUserSchema.parse(req.body);
+      const updatedUser = await storage.updateUser(userId, userData);
+      
+      if (!updatedUser) {
+        return res.status(404).json({ error: "User not found" });
+      }
+      
+      res.json(updatedUser);
+    } catch (error) {
+      if (error instanceof ZodError) {
+        return res.status(400).json({ error: fromZodError(error).message });
+      }
+      console.error("Error updating user profile:", error);
+      res.status(500).json({ error: "Failed to update user profile" });
+    }
   });
 
   // Create HTTP server

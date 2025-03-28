@@ -184,6 +184,34 @@ const Sidebar = ({ isOpen, onClose, user }: SidebarProps) => {
                 </div>
               </Link>
             </li>
+            <li>
+              <Link href="/import">
+                <div className={`flex items-center p-3 text-sm font-medium rounded-md cursor-pointer ${
+                  location === "/import" 
+                    ? "bg-[#0052CC] bg-opacity-10 text-[#0052CC]" 
+                    : "hover:bg-[#FAFBFC] text-[#6B778C] hover:text-[#0052CC]"
+                }`}>
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 19l3 3m0 0l3-3m-3 3V10" />
+                  </svg>
+                  <span>CSV Import</span>
+                </div>
+              </Link>
+            </li>
+            <li>
+              <Link href="/profile">
+                <div className={`flex items-center p-3 text-sm font-medium rounded-md cursor-pointer ${
+                  location === "/profile" 
+                    ? "bg-[#0052CC] bg-opacity-10 text-[#0052CC]" 
+                    : "hover:bg-[#FAFBFC] text-[#6B778C] hover:text-[#0052CC]"
+                }`}>
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                  </svg>
+                  <span>User Profile</span>
+                </div>
+              </Link>
+            </li>
             {user && (user.role === 'admin' || user.role === 'manager') && (
               <li>
                 <Link href="/admin">
