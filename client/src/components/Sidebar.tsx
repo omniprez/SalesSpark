@@ -185,20 +185,6 @@ const Sidebar = ({ isOpen, onClose, user }: SidebarProps) => {
               </Link>
             </li>
             <li>
-              <Link href="/import">
-                <div className={`flex items-center p-3 text-sm font-medium rounded-md cursor-pointer ${
-                  location === "/import" 
-                    ? "bg-[#0052CC] bg-opacity-10 text-[#0052CC]" 
-                    : "hover:bg-[#FAFBFC] text-[#6B778C] hover:text-[#0052CC]"
-                }`}>
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 19l3 3m0 0l3-3m-3 3V10" />
-                  </svg>
-                  <span>CSV Import</span>
-                </div>
-              </Link>
-            </li>
-            <li>
               <Link href="/profile">
                 <div className={`flex items-center p-3 text-sm font-medium rounded-md cursor-pointer ${
                   location === "/profile" 
@@ -232,7 +218,7 @@ const Sidebar = ({ isOpen, onClose, user }: SidebarProps) => {
           </ul>
         </nav>
         
-        <div className="mt-8 pt-6 border-t border-[#DFE1E6]">
+        <div className="mt-6 pt-6 border-t border-[#DFE1E6]">
           <h3 className="text-xs font-semibold text-[#6B778C] uppercase tracking-wider mb-3">Sales Categories</h3>
           <div className="space-y-2">
             <a href="#" className="group flex items-center px-3 py-2 text-sm font-medium rounded-md text-[#0052CC] bg-[#0052CC] bg-opacity-5">
@@ -243,6 +229,24 @@ const Sidebar = ({ isOpen, onClose, user }: SidebarProps) => {
               <span className="w-2 h-2 mr-3 rounded-full bg-green-500"></span>
               Fiber Connectivity
             </a>
+          </div>
+        </div>
+        
+        <div className="mt-6 pt-6 border-t border-[#DFE1E6]">
+          <h3 className="text-xs font-semibold text-[#6B778C] uppercase tracking-wider mb-3">Tools & Utilities</h3>
+          <div className="space-y-1">
+            <Link href="/import">
+              <div className={`flex items-center px-3 py-2 text-sm font-medium rounded-md text-[#6B778C] hover:text-[#0052CC] ${
+                location === "/import" 
+                  ? "bg-[#0052CC] bg-opacity-10 text-[#0052CC]" 
+                  : "hover:bg-[#FAFBFC]"
+              }`}>
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 19l3 3m0 0l3-3m-3 3V10" />
+                </svg>
+                <span>CSV Import</span>
+              </div>
+            </Link>
           </div>
         </div>
       </div>

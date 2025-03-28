@@ -59,26 +59,58 @@ function SimpleDebugView() {
 function Router() {
   return (
     <Switch>
-      <Route path="/login" component={Login} />
-      <Route path="/debug" component={Debug} />
+      <Route path="/login">
+        <Login />
+      </Route>
+      <Route path="/debug">
+        <Debug />
+      </Route>
       <Route>
         <AuthGuard>
           <Layout>
             <Switch>
-              <Route path="/" component={Dashboard} />
-              <Route path="/pipeline" component={SalesPipeline} />
-              <Route path="/weekly-pipeline" component={WeeklyPipeline} />
-              <Route path="/team-pipeline" component={TeamPipeline} />
-              <Route path="/admin" component={AdminDashboard} />
-              <Route path="/leaderboard" component={Leaderboard} />
-              <Route path="/team" component={TeamManagement} />
-              <Route path="/achievements" component={Achievements} />
-              <Route path="/rewards" component={RewardsAndIncentives} />
-              <Route path="/profile" component={UserProfile} />
-              <Route path="/import" component={CSVImport} />
-              <Route path="/simpledebug" component={SimpleDebugView} />
-              <Route path="/test" component={TestPage} />
-              <Route component={NotFound} />
+              <Route path="/" exact>
+                <Dashboard />
+              </Route>
+              <Route path="/pipeline">
+                <SalesPipeline />
+              </Route>
+              <Route path="/weekly-pipeline">
+                <WeeklyPipeline />
+              </Route>
+              <Route path="/team-pipeline">
+                <TeamPipeline />
+              </Route>
+              <Route path="/admin">
+                <AdminDashboard />
+              </Route>
+              <Route path="/leaderboard">
+                <Leaderboard />
+              </Route>
+              <Route path="/team">
+                <TeamManagement />
+              </Route>
+              <Route path="/achievements">
+                <Achievements />
+              </Route>
+              <Route path="/rewards">
+                <RewardsAndIncentives />
+              </Route>
+              <Route path="/profile">
+                <UserProfile />
+              </Route>
+              <Route path="/import">
+                <CSVImport />
+              </Route>
+              <Route path="/simpledebug">
+                <SimpleDebugView />
+              </Route>
+              <Route path="/test">
+                <TestPage />
+              </Route>
+              <Route>
+                <NotFound />
+              </Route>
             </Switch>
           </Layout>
         </AuthGuard>
