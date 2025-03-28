@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { apiRequest, queryClient } from '@/lib/queryClient';
 import { useToast } from '@/hooks/use-toast';
@@ -37,7 +37,9 @@ import {
   UserCog, 
   FileQuestion, 
   Loader2, 
-  Save
+  Save,
+  Upload,
+  X
 } from 'lucide-react';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -90,6 +92,11 @@ const UserProfile = () => {
     enabled: !!userId,
   });
   
+  // State for file upload
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  
   // Setup the form with default values from current user
   const form = useForm<ProfileFormValues>({
     resolver: zodResolver(profileFormSchema),
@@ -112,19 +119,53 @@ const UserProfile = () => {
         teamId: currentUser.teamId,
         isChannelPartner: currentUser.isChannelPartner || false,
       });
+      
+      if (currentUser.avatar) {
+        setPreviewUrl(currentUser.avatar);
+      }
     }
   }, [currentUser, form]);
+  
+  // Handle file selection
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setSelectedFile(file);
+      
+      // Create preview URL for the selected image
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        const result = reader.result as string;
+        setPreviewUrl(result);
+        // Update the form value with the base64 data
+        form.setValue("avatar", result);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+  
+  // Clear selected file
+  const clearSelectedFile = () => {
+    setSelectedFile(null);
+    setPreviewUrl(currentUser?.avatar || null);
+    form.setValue("avatar", currentUser?.avatar || "");
+    
+    // Reset file input
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
+  };
   
   // Profile update mutation
   const updateProfileMutation = useMutation({
     mutationFn: async (values: ProfileFormValues) => {
       if (!userId) throw new Error("User ID not found");
-      const response = await apiRequest('PATCH', `/api/users/${userId}/profile`, values);
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to update profile');
+      try {
+        return await apiRequest('PATCH', `/api/users/${userId}/profile`, values);
+      } catch (error) {
+        console.error("Profile update error:", error);
+        throw error;
       }
-      return await response.json();
     },
     onSuccess: () => {
       toast({
@@ -199,7 +240,7 @@ const UserProfile = () => {
                   <div className="flex flex-col md:flex-row gap-6">
                     <div className="md:w-1/3 flex flex-col items-center justify-start">
                       <Avatar className="h-24 w-24 mb-4">
-                        <AvatarImage src={form.getValues("avatar") || undefined} alt={currentUser.name} />
+                        <AvatarImage src={previewUrl || undefined} alt={currentUser.name} />
                         <AvatarFallback>{currentUser.name?.substring(0, 2).toUpperCase()}</AvatarFallback>
                       </Avatar>
                       
@@ -208,12 +249,45 @@ const UserProfile = () => {
                         name="avatar"
                         render={({ field }) => (
                           <FormItem className="w-full">
-                            <FormLabel>Profile Picture URL</FormLabel>
-                            <FormControl>
-                              <Input placeholder="https://example.com/avatar.jpg" {...field} />
-                            </FormControl>
+                            <FormLabel>Profile Picture</FormLabel>
+                            <div className="flex flex-col space-y-3">
+                              <div className="relative flex items-center">
+                                <Input
+                                  type="file"
+                                  accept="image/*"
+                                  onChange={handleFileChange}
+                                  ref={fileInputRef}
+                                  className="opacity-0 absolute inset-0 w-full h-full cursor-pointer z-10"
+                                />
+                                <Button 
+                                  type="button" 
+                                  variant="outline" 
+                                  className="w-full flex items-center justify-center"
+                                >
+                                  <Upload className="h-4 w-4 mr-2" />
+                                  Upload Photo
+                                </Button>
+                              </div>
+                              
+                              {selectedFile && (
+                                <div className="flex items-center justify-between p-2 border rounded-md">
+                                  <span className="text-sm text-muted-foreground truncate max-w-[180px]">
+                                    {selectedFile.name}
+                                  </span>
+                                  <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={clearSelectedFile}
+                                    className="h-8 w-8 p-0"
+                                  >
+                                    <X className="h-4 w-4" />
+                                  </Button>
+                                </div>
+                              )}
+                            </div>
                             <FormDescription>
-                              Enter a URL for your profile picture
+                              Upload a profile picture from your computer
                             </FormDescription>
                             <FormMessage />
                           </FormItem>
