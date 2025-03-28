@@ -69,7 +69,7 @@ function Router() {
         <AuthGuard>
           <Layout>
             <Switch>
-              <Route path="/" exact>
+              <Route path="/">
                 <Dashboard />
               </Route>
               <Route path="/pipeline">

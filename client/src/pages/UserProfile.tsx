@@ -258,14 +258,14 @@ const UserProfile = () => {
                             <FormLabel>Team</FormLabel>
                             <FormControl>
                               <Select 
-                                value={field.value?.toString()} 
-                                onValueChange={(value) => field.onChange(Number(value))}
+                                value={field.value?.toString() || "0"} 
+                                onValueChange={(value) => field.onChange(value === "0" ? null : Number(value))}
                               >
                                 <SelectTrigger>
                                   <SelectValue placeholder="Select a team" />
                                 </SelectTrigger>
                                 <SelectContent>
-                                  <SelectItem value="">No Team</SelectItem>
+                                  <SelectItem value="0">No Team</SelectItem>
                                   {teams?.map((team: any) => (
                                     <SelectItem key={team.id} value={team.id.toString()}>
                                       {team.name}
