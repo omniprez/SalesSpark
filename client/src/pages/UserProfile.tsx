@@ -126,21 +126,97 @@ const UserProfile = () => {
     }
   }, [currentUser, form]);
   
+  // Compress and resize image before uploading
+  const compressImage = (file: File, maxSizeKB: number = 100): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onload = (event) => {
+        const img = new Image();
+        img.src = event.target?.result as string;
+        img.onload = () => {
+          // Calculate new dimensions while maintaining aspect ratio
+          let width = img.width;
+          let height = img.height;
+          const MAX_WIDTH = 300;
+          const MAX_HEIGHT = 300;
+          
+          if (width > height) {
+            if (width > MAX_WIDTH) {
+              height = Math.round(height * (MAX_WIDTH / width));
+              width = MAX_WIDTH;
+            }
+          } else {
+            if (height > MAX_HEIGHT) {
+              width = Math.round(width * (MAX_HEIGHT / height));
+              height = MAX_HEIGHT;
+            }
+          }
+          
+          const canvas = document.createElement('canvas');
+          canvas.width = width;
+          canvas.height = height;
+          
+          const ctx = canvas.getContext('2d');
+          if (!ctx) {
+            reject(new Error('Could not get canvas context'));
+            return;
+          }
+          
+          ctx.drawImage(img, 0, 0, width, height);
+          
+          // Start with high quality
+          let quality = 0.9;
+          let result = canvas.toDataURL('image/jpeg', quality);
+          
+          // Reduce quality until the size is under the limit
+          while (result.length > maxSizeKB * 1024 && quality > 0.1) {
+            quality -= 0.1;
+            result = canvas.toDataURL('image/jpeg', quality);
+          }
+          
+          resolve(result);
+        };
+        img.onerror = () => reject(new Error('Failed to load image'));
+      };
+      reader.onerror = () => reject(new Error('Failed to read file'));
+    });
+  };
+  
   // Handle file selection
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      setSelectedFile(file);
-      
-      // Create preview URL for the selected image
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        const result = reader.result as string;
-        setPreviewUrl(result);
-        // Update the form value with the base64 data
-        form.setValue("avatar", result);
-      };
-      reader.readAsDataURL(file);
+      try {
+        setSelectedFile(file);
+        
+        // Create simple preview for immediate feedback
+        const reader = new FileReader();
+        reader.onloadend = async () => {
+          const originalResult = reader.result as string;
+          setPreviewUrl(originalResult);
+          
+          // Compress the image for upload (max 200KB)
+          const compressedImage = await compressImage(file, 200);
+          
+          // Update form with compressed image
+          form.setValue("avatar", compressedImage);
+          
+          // Update preview with compressed version
+          setPreviewUrl(compressedImage);
+          
+          console.log("Original size:", Math.round(originalResult.length / 1024), "KB");
+          console.log("Compressed size:", Math.round(compressedImage.length / 1024), "KB");
+        };
+        reader.readAsDataURL(file);
+      } catch (error) {
+        console.error("Error processing image:", error);
+        toast({
+          title: "Image Processing Error",
+          description: "Failed to process the image. Please try a smaller image.",
+          variant: "destructive",
+        });
+      }
     }
   };
   
